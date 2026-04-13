@@ -1,8 +1,16 @@
 import os
+import json
 from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+# ---------- 从 config.json 读取最大文件大小限制 ----------
+with open('config.json', 'r', encoding='utf-8') as f:
+    config = json.load(f)
+max_mb = config.get('max_file_size_mb', 100)
+app.config['MAX_CONTENT_LENGTH'] = max_mb * 1024 * 1024  # 转换为字节
+# --------------------------------------------------------
 
 # 配置上传文件夹
 UPLOAD_FOLDER = 'uploads'
