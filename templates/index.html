@@ -10,5 +10,29 @@
         <input type="file" name="file" required>
         <button type="submit">上传</button>
     </form>
+    {% if files %}
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>原始文件名</th>
+            <th>存储文件名</th>
+            <th>大小</th>
+            <th>文件类型</th>
+            <th>上传时间</th>
+        </tr>
+        {% for file in files %}
+        <tr>
+            <td>{{ file[0] }}</td>           <!-- id -->
+            <td><a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a></td>           <!-- original_filename -->
+            <td>{{ file[2] }}</td>           <!-- stored_filename -->
+            <td>{{ file[3] | filesizeformat }}</td>           <!-- file_size -->
+            <td>{{ file[4] }}</td>           <!-- file_type -->
+            <td>{{ file[5] }}</td>           <!-- upload_time -->
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>还没有上传过任何文件。</p>
+    {% endif %}
 </body>
 </html>

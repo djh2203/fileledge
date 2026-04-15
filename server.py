@@ -26,8 +26,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/')
 def index():
-    """显示上传表单"""
-    return render_template('index.html')
+    files = database.get_all_files()   # 获取所有文件记录
+    return render_template('index.html', files=files)
 
 
 @app.route('/upload', methods=['POST'])
