@@ -50,3 +50,12 @@ def get_all_files():
     rows = cursor.fetchall()   # 获取所有行，返回一个列表
     conn.close()
     return rows
+
+def get_file_by_id(file_id):
+    """根据 ID 获取文件记录，返回一条元组，如果不存在则返回 None"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row

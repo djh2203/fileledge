@@ -19,7 +19,7 @@
     {% for file in files %}
     <tr>
         <td>{{ file[0] }}</td>           <!-- id -->
-        <td>{{ file[1] }}</td>           <!-- original_filename -->
+        <td><a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a></td>           <!-- original_filename -->
         <td>{{ file[2] }}</td>           <!-- stored_filename -->
         <td>{{ file[3] | filesizeformat }}</td>           <!-- file_size -->
         <td>{{ file[4] }}</td>           <!-- file_type -->

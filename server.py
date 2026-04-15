@@ -4,6 +4,8 @@ from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 import database
 from datetime import datetime
+from flask import Flask, request, render_template, send_from_directory
+
 database.init_db()   # 启动时确保表存在
 
 app = Flask(__name__)
@@ -26,6 +28,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def index():
     """显示上传表单"""
     return render_template('index.html')
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -55,6 +58,29 @@ def list_files():
     files = database.get_all_files()
     # 渲染模板，并把 files 传过去
     return render_template('files.html', files=files)
+
+
+@app.route('/download/<int:file_id>')
+def download_file(file_id):
+    # 1. 根据 ID 获取文件记录
+    record = database.get_file_by_id(file_id)
+    if record is None:
+        return "文件不存在", 404
+
+    # 2. 提取存储文件名和原始文件名（用于下载时的提示名）
+    # record 结构：(id, original_filename, stored_filename, size, type, upload_time, path)
+    stored_filename = record[2]          # 存储在 uploads/ 下的文件名
+    original_filename = record[1]        # 用户上传时的原始文件名
+
+    # 3. 发送文件
+    # send_from_directory 的第一个参数是目录路径，第二个参数是文件名
+    # as_attachment=True 会让浏览器弹出下载对话框，attachment_filename 可设置下载时的文件名
+    return send_from_directory(
+        app.config['UPLOAD_FOLDER'],
+        stored_filename,
+        as_attachment=True,
+        download_name=original_filename   # Flask 2.0+ 用 download_name，旧版用 attachment_filename
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
