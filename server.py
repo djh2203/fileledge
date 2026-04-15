@@ -2,6 +2,9 @@ import os
 import json
 from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
+import database
+from datetime import datetime
+database.init_db()   # 启动时确保表存在
 
 app = Flask(__name__)
 
@@ -33,14 +36,19 @@ def upload_file():
     file = request.files['file']
     if file.filename == '':
         return '文件名为空', 400
-
-    # 使用 secure_filename 清理文件名，防止路径遍历攻击
-    filename = secure_filename(file.filename)
-    # 可选：为防重名添加时间戳前缀，这里暂时保持原样
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    
+    original_name = file.filename
+    # 获取原始扩展名（带点，如 ".png"）
+    _, ext = os.path.splitext(file.filename)
+    # 生成时间戳字符串，例如 "20260414153012"
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    stored_filename = timestamp + ext
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
     file.save(file_path)
+    size = os.path.getsize(file_path)
+    database.add_file_record(original_name, stored_filename, size, file.mimetype, file_path)
+    return f'文件 "{original_name}" 上传成功！'
 
-    return f'文件 "{filename}" 上传成功！'
 
 if __name__ == '__main__':
     app.run(debug=True)
