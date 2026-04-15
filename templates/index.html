@@ -20,6 +20,12 @@
         <input type="file" name="file" required>
         <button type="submit">上传</button>
     </form>
+    <!-- 进度条容器，初始隐藏 -->
+    <div id="progress-container" style="display: none; margin-top: 10px;">
+        <div id="progress-bar" style="width: 0%; height: 20px; background-color: #4CAF50; text-align: center; line-height: 20px; color: white;">0%</div>
+    </div>
+    <!-- 上传状态文字 -->
+    <div id="upload-status" style="margin-top: 5px;"></div>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <ul class="flashes">
@@ -53,5 +59,7 @@
     {% else %}
     <p>还没有上传过任何文件。</p>
     {% endif %}
+
+    <script src="{{ url_for('static', filename='upload.js') }}"></script>
 </body>
 </html>
