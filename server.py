@@ -49,6 +49,12 @@ def upload_file():
     database.add_file_record(original_name, stored_filename, size, file.mimetype, file_path)
     return f'文件 "{original_name}" 上传成功！'
 
+@app.route('/files')
+def list_files():
+    # 调用数据库函数获取所有记录
+    files = database.get_all_files()
+    # 渲染模板，并把 files 传过去
+    return render_template('files.html', files=files)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>已上传文件列表</title>
+    <style>
+    </style>
+</head>
+<body>
+    <h1>已上传文件</h1>
+    <table>
+    <tr>
+        <th>ID</th>
+        <th>原始文件名</th>
+        <th>存储文件名</th>
+        <th>大小(字节)</th>
+        <th>类型</th>
+        <th>上传时间</th>
+    </tr>
+    {% for file in files %}
+    <tr>
+        <td>{{ file[0] }}</td>           <!-- id -->
+        <td>{{ file[1] }}</td>           <!-- original_filename -->
+        <td>{{ file[2] }}</td>           <!-- stored_filename -->
+        <td>{{ file[3] }}</td>           <!-- file_size -->
+        <td>{{ file[4] }}</td>           <!-- file_type -->
+        <td>{{ file[5] }}</td>           <!-- upload_time -->
+    </tr>
+    {% endfor %}
+</table>
+    <a href="/">返回上传页</a>
+</body>
+</html>

@@ -42,3 +42,11 @@ def add_file_record(original_name, stored_name, size, mime_type, saved_path):
     conn.commit()
     conn.close()
 
+def get_all_files():
+    """返回 files 表中的所有记录，按上传时间倒序"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM files ORDER BY upload_time DESC")
+    rows = cursor.fetchall()   # 获取所有行，返回一个列表
+    conn.close()
+    return rows
