@@ -6,6 +6,9 @@ import database
 from datetime import datetime
 from flask import Flask, request, render_template, send_from_directory, flash, redirect, url_for
 import secrets
+from flask import Flask, request, render_template, send_from_directory, redirect, url_for
+from werkzeug.exceptions import RequestEntityTooLarge
+
 
 
 
@@ -31,7 +34,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route('/')
 def index():
     files = database.get_all_files()   # 获取所有文件记录
-    return render_template('index.html', files=files)
+    return render_template('index.html', 
+                           files=files, 
+                           max_content_length=app.config['MAX_CONTENT_LENGTH'])
 
 
 @app.route('/upload', methods=['POST'])
@@ -87,6 +92,10 @@ def download_file(file_id):
         as_attachment=True,
         download_name=original_filename   # Flask 2.0+ 用 download_name，旧版用 attachment_filename
     )
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(e):
+    return "QwQ 文件过大，请上传小于 {} MB 的文件~".format(max_mb), 413
 
 if __name__ == '__main__':
     app.run(debug=True)

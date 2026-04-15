@@ -15,6 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('请先选择一个文件');
             return;
         }
+        if (file.size > MAX_FILE_SIZE) {
+            alert('QWQ 文件过大，最大允许 ' + (MAX_FILE_SIZE / 1024 / 1024).toFixed(0) + ' MB~');
+            return;  // 阻止上传
+        }
 
         const formData = new FormData();
         formData.append('file', file);
