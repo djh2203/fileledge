@@ -21,7 +21,7 @@
         <td>{{ file[0] }}</td>           <!-- id -->
         <td>{{ file[1] }}</td>           <!-- original_filename -->
         <td>{{ file[2] }}</td>           <!-- stored_filename -->
-        <td>{{ file[3] }}</td>           <!-- file_size -->
+        <td>{{ file[3] | filesizeformat }}</td>           <!-- file_size -->
         <td>{{ file[4] }}</td>           <!-- file_type -->
         <td>{{ file[5] }}</td>           <!-- upload_time -->
     </tr>

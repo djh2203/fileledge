@@ -32,7 +32,7 @@ def add_file_record(original_name, stored_name, size, mime_type, saved_path):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     # 获取当前时间（ISO 格式字符串）
-    upload_time = datetime.datetime.now().isoformat()
+    upload_time = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
     # 执行插入语句，用 ? 作为占位符（防 SQL 注入）
     cursor.execute('''
         INSERT INTO files 
@@ -46,7 +46,7 @@ def get_all_files():
     """返回 files 表中的所有记录，按上传时间倒序"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM files ORDER BY upload_time DESC")
+    cursor.execute("SELECT * FROM files ORDER BY id DESC")
     rows = cursor.fetchall()   # 获取所有行，返回一个列表
     conn.close()
     return rows
