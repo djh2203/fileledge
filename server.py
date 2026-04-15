@@ -4,11 +4,15 @@ from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 import database
 from datetime import datetime
-from flask import Flask, request, render_template, send_from_directory
+from flask import Flask, request, render_template, send_from_directory, flash, redirect, url_for
+import secrets
+
+
 
 database.init_db()   # 启动时确保表存在
 
 app = Flask(__name__)
+app.secret_key = secrets.token_hex(16)   # 每次启动自动生成新的，或者固定写一个
 
 # ---------- 从 config.json 读取最大文件大小限制 ----------
 with open('config.json', 'r', encoding='utf-8') as f:
@@ -50,7 +54,9 @@ def upload_file():
     file.save(file_path)
     size = os.path.getsize(file_path)
     database.add_file_record(original_name, stored_filename, size, file.mimetype, file_path)
-    return f'文件 "{original_name}" 上传成功！'
+    flash(f'文件 "{original_name}" 上传成功！', 'success')
+    # 重定向回首页
+    return redirect(url_for('index'))
 
 @app.route('/files')
 def list_files():
