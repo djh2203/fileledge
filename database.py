@@ -161,6 +161,51 @@ def get_all_files():
     return rows
 
 
+def get_file_by_id_admin(file_id):
+    """获取任意用户的文件记录（管理员用）"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+
+def delete_file_record(file_id):
+    """删除一条文件记录，返回 (stored_filename, relative_path, user_id) 或 None"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT stored_filename, relative_path, user_id FROM files WHERE id = ?", (file_id,))
+    row = cursor.fetchone()
+    if row is None:
+        conn.close()
+        return None
+    cursor.execute("DELETE FROM files WHERE id = ?", (file_id,))
+    conn.commit()
+    conn.close()
+    return row   # (stored_name, relative_path, user_id)
+
+
+def delete_folder_and_files(folder_path, user_id):
+    """
+    删除指定用户下某个文件夹及其所有子文件/子文件夹（数据库记录）
+    """
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    # 删除所有以该路径开头的文件夹
+    cursor.execute(
+        "DELETE FROM folders WHERE folder_path LIKE ? AND user_id = ?",
+        (folder_path + '%', user_id)
+    )
+    # 删除所有以该路径开头的文件
+    cursor.execute(
+        "DELETE FROM files WHERE relative_path LIKE ? AND user_id = ?",
+        (folder_path + '%', user_id)
+    )
+    conn.commit()
+    conn.close()
+
+
 # ---------- 文件夹操作 ----------
 def add_folder(folder_path, user_id):
     conn = sqlite3.connect(DATABASE)

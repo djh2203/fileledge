@@ -3,6 +3,7 @@ import os
 import re
 import json
 import secrets
+import shutil
 import database
 from datetime import datetime
 from functools import wraps
@@ -234,7 +235,7 @@ def upload_file():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
     stored_filename = timestamp + ext
 
-    target_dir = os.path.join(app.config['UPLOAD_FOLDER'], current_path)
+    target_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(session['user_id']), current_path)
     os.makedirs(target_dir, exist_ok=True)
 
     file_path = os.path.join(target_dir, stored_filename)
@@ -285,7 +286,7 @@ def create_folder():
     if not is_safe_path(new_path):
         return jsonify(success=False, message='非法路径'), 400
 
-    full_dir = os.path.join(app.config['UPLOAD_FOLDER'], new_path)
+    full_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(session['user_id']), new_path)
     os.makedirs(full_dir, exist_ok=True)
 
     database.add_folder(new_path, session['user_id'])
@@ -307,13 +308,88 @@ def download_file(file_id):
     original_filename = record[1]
     relative_path = record[7] if len(record) > 7 else ''
 
-    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], relative_path)
+    user_id = record[8] if len(record) > 8 else session['user_id']
+    file_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(user_id), relative_path)
     return send_from_directory(
         file_dir,
         stored_filename,
         as_attachment=True,
         download_name=original_filename
     )
+
+
+@app.route('/admin/user/<int:user_id>/files')
+@login_required
+@admin_required
+def admin_user_files(user_id):
+    """管理员以只读方式查看某用户的文件（也可以删除）"""
+    current_path = normalize_path(request.args.get('path', ''))
+    if not is_safe_path(current_path):
+        return "非法路径", 400
+
+    user = database.get_user_by_id(user_id)
+    if user is None:
+        return "用户不存在", 404
+
+    folders = database.get_folders(current_path, user_id)
+    files = database.get_files_by_path(current_path, user_id)
+    return render_template('admin_user_files.html',
+                           files=files,
+                           folders=folders,
+                           current_path=current_path,
+                           view_user_id=user_id,
+                           view_username=user[1])
+
+
+@app.route('/admin/delete/file/<int:file_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_file(file_id):
+    if not verify_csrf_token(request.form.get('csrf_token')):
+        return jsonify(success=False, message='非法请求'), 400
+
+    record = database.get_file_by_id_admin(file_id)
+    if record is None:
+        return jsonify(success=False, message='文件不存在'), 404
+
+    # record: (id, original, stored, size, type, time, path, relative_path, user_id)
+    stored_name = record[2]
+    relative_path = record[7]
+    user_id = record[8]
+
+    # 删除物理文件
+    file_full = os.path.join(app.config['UPLOAD_FOLDER'], str(user_id), relative_path, stored_name)
+    try:
+        os.remove(file_full)
+    except FileNotFoundError:
+        pass
+
+    # 删除数据库记录
+    database.delete_file_record(file_id)
+    return jsonify(success=True, message='文件已删除'), 200
+
+
+@app.route('/admin/delete/folder', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_folder():
+    if not verify_csrf_token(request.form.get('csrf_token')):
+        return jsonify(success=False, message='非法请求'), 400
+
+    folder_path = request.form.get('folder_path', '')
+    user_id_str = request.form.get('user_id', '')
+    if not folder_path or not user_id_str:
+        return jsonify(success=False, message='参数错误'), 400
+    user_id = int(user_id_str)
+
+    # 物理删除整个目录树
+    full_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(user_id), folder_path)
+    if os.path.exists(full_dir):
+        shutil.rmtree(full_dir)
+
+    # 删除数据库中的文件夹和其下所有文件
+    database.delete_folder_and_files(folder_path, user_id)
+    return jsonify(success=True, message='文件夹已删除'), 200
 
 
 @app.errorhandler(RequestEntityTooLarge)

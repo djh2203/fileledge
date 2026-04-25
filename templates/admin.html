@@ -52,6 +52,7 @@
                                     <th>用户名</th>
                                     <th>角色</th>
                                     <th>注册时间</th>
+                                    <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -61,6 +62,9 @@
                                 <td>{{ u[1] }}</td>
                                 <td>{{ u[2] }}</td>
                                 <td>{{ u[3] }}</td>
+                                <td>
+                                    <a href="{{ url_for('admin_user_files', user_id=u[0]) }}" class="btn btn-sm btn-outline-primary">管理文件</a>
+                                </td>
                             </tr>
                             {% endfor %}
                             </tbody>
