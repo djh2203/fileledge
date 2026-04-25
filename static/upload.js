@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('path', CURRENT_PATH);
 
         const xhr = new XMLHttpRequest();
 
@@ -34,15 +35,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         xhr.addEventListener('load', function() {
-            if (xhr.status === 200) {
-                statusDiv.innerHTML = '<span style="color: green;">上传成功！</span>';
+            let response;
+            try {
+                response = JSON.parse(xhr.responseText);
+            } catch (e) {
+                response = { success: false, message: '响应异常，请重试' };
+            }
+
+            if (xhr.status === 200 && response.success) {
+                statusDiv.innerHTML = '<span style="color: green;">' + response.message + '</span>';
+                fileInput.value = '';
                 setTimeout(() => {
                     location.reload();
                 }, 1000);
-                fileInput.value = '';
             } else {
-                statusDiv.innerHTML = '<span style="color: red;">上传失败：' + xhr.responseText + '</span>';
+                statusDiv.innerHTML = '<span style="color: red;">上传失败：' + (response.message || xhr.statusText) + '</span>';
             }
+
             setTimeout(() => {
                 progressContainer.style.display = 'none';
                 progressBar.style.width = '0%';

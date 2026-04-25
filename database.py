@@ -8,7 +8,7 @@ def init_db():
     """初始化数据库：创建 files 表（如果不存在）"""
     # 1. 连接数据库（文件不存在时会自动创建）
     conn = sqlite3.connect(DATABASE)
-    # 2. 创建一个“游标”对象，用来执行 SQL 语句
+    # 2. 创建一个"游标"对象，用来执行 SQL 语句
     cursor = conn.cursor()
     # 3. 执行建表语句
     cursor.execute('''
@@ -19,7 +19,15 @@ def init_db():
             file_size INTEGER NOT NULL,
             file_type TEXT,
             upload_time TEXT NOT NULL,
-            file_path TEXT NOT NULL
+            file_path TEXT NOT NULL,
+            relative_path TEXT NOT NULL DEFAULT ''
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            folder_path TEXT NOT NULL UNIQUE,
+            created_time TEXT NOT NULL
         )
     ''')
     # 4. 提交事务（把改动真正保存到文件）
@@ -27,7 +35,7 @@ def init_db():
     # 5. 关闭连接
     conn.close()
     
-def add_file_record(original_name, stored_name, size, mime_type, saved_path):
+def add_file_record(original_name, stored_name, size, mime_type, saved_path, relative_path=''):
     """插入一条文件上传记录"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -35,12 +43,62 @@ def add_file_record(original_name, stored_name, size, mime_type, saved_path):
     upload_time = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
     # 执行插入语句，用 ? 作为占位符（防 SQL 注入）
     cursor.execute('''
-        INSERT INTO files 
-        (original_filename, stored_filename, file_size, file_type, upload_time, file_path)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (original_name, stored_name, size, mime_type, upload_time, saved_path))
+        INSERT INTO files
+        (original_filename, stored_filename, file_size, file_type, upload_time, file_path, relative_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (original_name, stored_name, size, mime_type, upload_time, saved_path, relative_path))
     conn.commit()
     conn.close()
+
+def get_files_by_path(relative_path):
+    """返回指定路径下的所有文件记录，按上传时间倒序"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM files WHERE relative_path = ? ORDER BY id DESC", (relative_path,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def add_folder(folder_path):
+    """插入文件夹记录"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    created_time = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
+    cursor.execute('''
+        INSERT OR IGNORE INTO folders (folder_path, created_time) VALUES (?, ?)
+    ''', (folder_path, created_time))
+    conn.commit()
+    conn.close()
+
+def get_folders(relative_path):
+    """返回指定路径下的直接子文件夹"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    # 查找以 relative_path 开头且下一级没有更多 / 的文件夹
+    if relative_path:
+        pattern = relative_path + '%'
+        cursor.execute("SELECT folder_path FROM folders WHERE folder_path LIKE ?", (pattern,))
+    else:
+        cursor.execute("SELECT folder_path FROM folders")
+    rows = cursor.fetchall()
+    conn.close()
+
+    # 过滤出直接子文件夹
+    subfolders = []
+    for row in rows:
+        path = row[0]
+        # 去掉前缀后，看第一级目录
+        if relative_path:
+            rest = path[len(relative_path):]
+        else:
+            rest = path
+        # 如果 rest 是 "xxx/" 的形式，取第一级
+        if rest and not rest.startswith('/'):
+            rest = '/' + rest
+        parts = rest.strip('/').split('/')
+        if parts and parts[0] and parts[0] not in [s['name'] for s in subfolders]:
+            subfolders.append({'name': parts[0], 'path': path})
+    return subfolders
 
 def get_all_files():
     """返回 files 表中的所有记录，按上传时间倒序"""

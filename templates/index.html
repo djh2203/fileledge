@@ -2,68 +2,121 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>文件上传（最简版）</title>
+    <title>文件管理</title>
     <style>
-    .success {
-        color: green;
-        font-weight: bold;
-    }
-    .error {
-        color: red;
-        font-weight: bold;
-    }
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    .folder-list { margin: 10px 0; }
+    .folder-list a { margin-right: 15px; text-decoration: none; color: #0066cc; }
+    .folder-list a:hover { text-decoration: underline; }
+    .breadcrumb { margin: 10px 0; }
+    .breadcrumb a { margin-right: 5px; }
     </style>
     <script>
         // 从后端传递配置到前端，单位：字节
         const MAX_FILE_SIZE = {{ max_content_length }};
+        // 当前路径
+        const CURRENT_PATH = "{{ current_path }}";
     </script>
 </head>
 <body>
-    <h1>上传文件</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
+    <h1>文件管理</h1>
+
+    <!-- 面包屑导航 -->
+    <div class="breadcrumb">
+        <a href="{{ url_for('index', path='') }}">根目录</a>
+        {% set parts = current_path.strip('/').split('/') %}
+        {% set cumulative = '' %}
+        {% for part in parts if part %}
+            {% set cumulative = cumulative ~ part ~ '/' %}
+            / <a href="{{ url_for('index', path=cumulative) }}">{{ part }}</a>
+        {% endfor %}
+    </div>
+
+    <!-- 创建文件夹 -->
+    <div style="margin: 10px 0;">
+        <input type="text" id="new-folder-name" placeholder="新文件夹名">
+        <button onclick="createFolder()">创建文件夹</button>
+    </div>
+
+    <!-- 上传表单 -->
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="hidden" name="path" value="{{ current_path }}">
         <input type="file" name="file" required>
         <button type="submit">上传</button>
     </form>
-    <!-- 进度条容器，初始隐藏 -->
+
+    <!-- 进度条容器 -->
     <div id="progress-container" style="display: none; margin-top: 10px;">
         <div id="progress-bar" style="width: 0%; height: 20px; background-color: #4CAF50; text-align: center; line-height: 20px; color: white;">0%</div>
     </div>
     <!-- 上传状态文字 -->
     <div id="upload-status" style="margin-top: 5px;"></div>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul class="flashes">
-            {% for category, message in messages %}
-                <li class="{{ category }}">{{ message }}</li>
-            {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+
+    <!-- 文件夹列表 -->
+    {% if folders %}
+    <div class="folder-list">
+        <strong>文件夹：</strong>
+        {% for folder in folders %}
+            <a href="{{ url_for('index', path=folder.path) }}">{{ folder.name }}/</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 文件列表 -->
     {% if files %}
     <table>
         <tr>
             <th>ID</th>
-            <th>原始文件名</th>
-            <th>存储文件名</th>
+            <th>文件名</th>
             <th>大小</th>
-            <th>文件类型</th>
+            <th>类型</th>
             <th>上传时间</th>
         </tr>
         {% for file in files %}
         <tr>
-            <td>{{ file[0] }}</td>           <!-- id -->
-            <td><a href="/uploads/{{ file[2] }}">{{ file[1] }}</a></td>        <!-- original_filename -->
-            <td>{{ file[2] }}</td>           <!-- stored_filename -->
-            <td>{{ file[3] | filesizeformat }}</td>           <!-- file_size -->
-            <td>{{ file[4] }}</td>           <!-- file_type -->
-            <td>{{ file[5] }}</td>           <!-- upload_time -->
+            <td>{{ file[0] }}</td>
+            <td><a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a></td>
+            <td>{{ file[3] | filesizeformat }}</td>
+            <td>{{ file[4] }}</td>
+            <td>{{ file[5] }}</td>
         </tr>
         {% endfor %}
     </table>
     {% else %}
-    <p>还没有上传过任何文件。</p>
+    <p>该目录下没有文件。</p>
     {% endif %}
 
+    <script>
+    function createFolder() {
+        const nameInput = document.getElementById('new-folder-name');
+        const folderName = nameInput.value.trim();
+        if (!folderName) {
+            alert('请输入文件夹名');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('path', CURRENT_PATH);
+        formData.append('folder_name', folderName);
+
+        fetch('/create-folder', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || '创建失败');
+            }
+        })
+        .catch(err => {
+            alert('请求失败');
+        });
+    }
+    </script>
     <script src="{{ url_for('static', filename='upload.js') }}"></script>
 </body>
 </html>
