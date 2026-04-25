@@ -2,3 +2,4 @@ venv/
 uploads/
 uploads.db
 __pycache__/
+new.txt

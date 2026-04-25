@@ -1,11 +1,13 @@
 # database.py
+import os
 import sqlite3
 import datetime
 
-DATABASE = 'uploads.db'
+DATABASE = os.path.join('instance', 'uploads.db')
 
 def init_db():
     """初始化数据库：创建所需的表（如果不存在）"""
+    os.makedirs('instance', exist_ok=True)   # 自动创建 instance 目录
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute("PRAGMA foreign_keys = ON;")   # 开启外键约束
