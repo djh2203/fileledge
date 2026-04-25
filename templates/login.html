@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>文件云盘 - 登录</h1>
+    <form id="login-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <p><input type="text" name="username" placeholder="用户名" required></p>
+        <p><input type="password" name="password" placeholder="密码" required></p>
+        <p><button type="submit">登录</button></p>
+    </form>
+    <p>还没有账号？<a href="{{ url_for('register') }}">立即注册</a></p>
+    <div id="message"></div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/login', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    const msg = document.getElementById('message');
+                    if (data.success) {
+                        msg.innerHTML = '<span style="color:green;">登录成功，正在跳转...</span>';
+                        setTimeout(() => { location.href = '/'; }, 500);
+                    } else {
+                        msg.innerHTML = '<span class="error">' + data.message + '</span>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('message').innerHTML = '<span class="error">网络错误</span>';
+                });
+        });
+    </script>
+</body>
+</html>

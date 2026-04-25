@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>注册</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>文件云盘 - 注册</h1>
+    <form id="register-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <p><input type="text" name="username" placeholder="用户名（字母、数字、下划线，3-20位）" required></p>
+        <p><input type="password" name="password" placeholder="密码（至少6位）" required></p>
+        <p><input type="password" name="confirm" placeholder="确认密码" required></p>
+        <p><button type="submit">注册</button></p>
+    </form>
+    <p>已有账号？<a href="{{ url_for('login') }}">去登录</a></p>
+    <div id="message"></div>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/register', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    const msg = document.getElementById('message');
+                    if (data.success) {
+                        msg.innerHTML = '<span style="color:green;">注册成功，正在跳转...</span>';
+                        setTimeout(() => { location.href = '/'; }, 500);
+                    } else {
+                        msg.innerHTML = '<span class="error">' + data.message + '</span>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('message').innerHTML = '<span class="error">网络错误</span>';
+                });
+        });
+    </script>
+</body>
+</html>

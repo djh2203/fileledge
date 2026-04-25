@@ -4,17 +4,21 @@
     <meta charset="UTF-8">
     <title>文件列表</title>
     <style>
-    .folder-list { margin: 10px 0; }
-    .folder-list a { margin-right: 15px; text-decoration: none; color: #0066cc; }
-    .folder-list a:hover { text-decoration: underline; }
-    .breadcrumb { margin: 10px 0; }
-    .breadcrumb a { margin-right: 5px; }
+        .folder-list { margin: 10px 0; }
+        .folder-list a { margin-right: 15px; text-decoration: none; color: #0066cc; }
+        .folder-list a:hover { text-decoration: underline; }
+        .breadcrumb { margin: 10px 0; }
+        .breadcrumb a { margin-right: 5px; }
+        .user-bar { margin-bottom: 10px; }
     </style>
 </head>
 <body>
+    <div class="user-bar">
+        欢迎，<strong>{{ username }}</strong> | <a href="{{ url_for('logout') }}">退出登录</a>
+    </div>
+
     <h1>文件列表</h1>
 
-    <!-- 面包屑导航 -->
     <div class="breadcrumb">
         <a href="{{ url_for('list_files', path='') }}">根目录</a>
         {% set parts = current_path.strip('/').split('/') %}
@@ -25,13 +29,11 @@
         {% endfor %}
     </div>
 
-    <!-- 创建文件夹 -->
     <div style="margin: 10px 0;">
         <input type="text" id="new-folder-name" placeholder="新文件夹名">
         <button onclick="createFolder()">创建文件夹</button>
     </div>
 
-    <!-- 文件夹列表 -->
     {% if folders %}
     <div class="folder-list">
         <strong>文件夹：</strong>
@@ -41,7 +43,6 @@
     </div>
     {% endif %}
 
-    <!-- 文件列表 -->
     {% if files %}
     <table>
         <tr>
@@ -75,10 +76,12 @@
             alert('请输入文件夹名');
             return;
         }
-
         const formData = new FormData();
         formData.append('path', "{{ current_path }}");
         formData.append('folder_name', folderName);
+        // CSRF token：从页面隐藏域获取（没有的话临时生成）
+        const csrfToken = "{{ csrf_token }}";
+        formData.append('csrf_token', csrfToken);
 
         fetch('/create-folder', {
             method: 'POST',

@@ -1,3 +1,4 @@
+// upload.js
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     const fileInput = document.querySelector('input[type="file"]');
@@ -5,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const progressBar = document.getElementById('progress-bar');
     const statusDiv = document.getElementById('upload-status');
 
-    if (!form) return;  // 如果页面上没有表单（比如在 files 页面），就不执行后续
+    if (!form) return;
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -17,12 +18,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (file.size > MAX_FILE_SIZE) {
             alert('QWQ 文件过大，最大允许 ' + (MAX_FILE_SIZE / 1024 / 1024).toFixed(0) + ' MB~');
-            return;  // 阻止上传
+            return;
         }
 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('path', CURRENT_PATH);
+        // 添加 csrf token
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        if (csrfInput) {
+            formData.append('csrf_token', csrfInput.value);
+        }
 
         const xhr = new XMLHttpRequest();
 
