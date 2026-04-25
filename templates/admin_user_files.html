@@ -3,12 +3,18 @@
 
 {% block content %}
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
+
+<nav class="navbar navbar-expand-lg mb-3" style="background-color: #00469c;">
     <div class="container-fluid">
-        <span class="navbar-brand">管理用户 {{ view_username }} 的文件</span>
-        <div class="navbar-nav ms-auto">
-            <a class="nav-link" href="{{ url_for('admin_panel') }}">返回用户列表</a>
-            <a class="nav-link" href="{{ url_for('logout') }}">退出登录</a>
+        <span class="navbar-brand" style="color: #fff;">管理用户 {{ view_username }} 的文件</span>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarRightAdmin">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarRightAdmin">
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('admin_panel') }}">返回用户列表</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">退出登录</a>
+            </div>
         </div>
     </div>
 </nav>
@@ -49,7 +55,6 @@
                 <tr>
                     <th>文件名</th>
                     <th>大小</th>
-                    <th>类型</th>
                     <th>上传时间</th>
                     <th>操作</th>
                 </tr>
@@ -57,9 +62,12 @@
             <tbody>
             {% for file in files %}
             <tr>
-                <td><a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a></td>
+                <td>
+                    <div class="text-truncate" style="max-width: 180px;" title="{{ file[1] }}">
+                        <a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a>
+                    </div>
+                </td>
                 <td>{{ file[3] | filesizeformat }}</td>
-                <td>{{ file[4] }}</td>
                 <td>{{ file[5] }}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-danger" 

@@ -11,20 +11,23 @@
 {% block content %}
 <!-- 导航栏 -->
 
-<nav class="navbar navbar-expand-lg navbar-dark mb-3">
+
+<nav class="navbar navbar-expand-lg mb-3" style="background-color: #00469c;">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">
-            <img src="https://drake.qdu.edu.cn/images/logo232.png"
-                 alt="文件云盘"
-                 height="40"
-                 style="display: block;">
+            <img src="https://drake.qdu.edu.cn/images/logo232.png" alt="文件云盘" height="40" style="display: block;">
         </a>
-        <div class="navbar-nav ms-auto">
-            <span class="nav-item nav-link disabled">欢迎，{{ username }}</span>
-            {% if role == 'admin' %}
-            <a class="nav-link" href="{{ url_for('admin_panel') }}">管理用户</a>
-            {% endif %}
-            <a class="nav-link" href="{{ url_for('logout') }}">退出登录</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarRight">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarRight">
+            <div class="navbar-nav ms-auto">
+                <span class="nav-link disabled" style="color: rgba(255,255,255,0.7);">欢迎，{{ username }}</span>
+                {% if role == 'admin' %}
+                <a class="nav-link" href="{{ url_for('admin_panel') }}">管理用户</a>
+                {% endif %}
+                <a class="nav-link" href="{{ url_for('logout') }}">退出登录</a>
+            </div>
         </div>
     </div>
 </nav>
@@ -86,16 +89,18 @@
                 <tr>
                     <th>文件名</th>
                     <th>大小</th>
-                    <th>类型</th>
                     <th>上传时间</th>
                 </tr>
             </thead>
             <tbody>
             {% for file in files %}
             <tr>
-                <td><a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a></td>
+                <td>
+                    <div class="text-truncate" style="max-width: 180px;" title="{{ file[1] }}">
+                        <a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a>
+                    </div>
+                </td>
                 <td>{{ file[3] | filesizeformat }}</td>
-                <td>{{ file[4] }}</td>
                 <td>{{ file[5] }}</td>
             </tr>
             {% endfor %}
