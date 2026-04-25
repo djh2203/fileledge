@@ -13,12 +13,12 @@ from flask import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import RequestEntityTooLarge
 
-database.init_db()   # 启动时确保表存在
+database.init_db()
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)   # 生产环境请改为固定强密码
 
-# ---------- 从 config.json 读取最大文件大小限制 ----------
+# ---------- 读取最大文件大小限制 ----------
 with open('config.json', 'r', encoding='utf-8') as f:
     config = json.load(f)
 max_mb = config.get('max_file_size_mb', 100)
@@ -42,8 +42,9 @@ def normalize_path(path):
         result += '/'
     return result
 
+# ---------- 登录与管理员装饰器 ----------
 def login_required(view_func):
-    """装饰器：要求用户已登录"""
+    """要求用户已登录"""
     @wraps(view_func)
     def wrapper(*args, **kwargs):
         if 'user_id' not in session:
@@ -51,7 +52,18 @@ def login_required(view_func):
         return view_func(*args, **kwargs)
     return wrapper
 
-# ---------- 简单 CSRF 保护 ----------
+def admin_required(view_func):
+    """要求当前用户为管理员"""
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        if session.get('role') != 'admin':
+            return "无权访问", 403
+        return view_func(*args, **kwargs)
+    return wrapper
+
+# ---------- CSRF 保护 ----------
 def generate_csrf_token():
     if 'csrf_token' not in session:
         session['csrf_token'] = secrets.token_hex(16)
@@ -60,50 +72,23 @@ def generate_csrf_token():
 def verify_csrf_token(token):
     return token and token == session.get('csrf_token')
 
-# 使 csrf_token 在所有模板中可用
 @app.context_processor
 def inject_csrf_token():
     return dict(csrf_token=generate_csrf_token())
 
 
-# ---------- 认证相关路由 ----------
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        # 验证 CSRF
-        if not verify_csrf_token(request.form.get('csrf_token')):
-            return jsonify(success=False, message='非法请求'), 400
-
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        confirm = request.form.get('confirm', '')
-
-        # 基础校验
-        if not username or not password:
-            return jsonify(success=False, message='用户名和密码不能为空'), 400
-        if not re.match(r'^[a-zA-Z0-9_]{3,20}$', username):
-            return jsonify(success=False, message='用户名需为3-20位字母、数字或下划线'), 400
-        if len(password) < 6:
-            return jsonify(success=False, message='密码至少6位'), 400
-        if password != confirm:
-            return jsonify(success=False, message='两次密码不一致'), 400
-
-        # 创建用户
-        password_hash = generate_password_hash(password)
-        user_id = database.create_user(username, password_hash)
-        if user_id is None:
-            return jsonify(success=False, message='用户名已存在'), 400
-
-        # 自动登录
-        session.clear()
-        session['user_id'] = user_id
-        session['username'] = username
-        return jsonify(success=True, message='注册成功！'), 200
-
-    # GET 请求显示注册页面
-    return render_template('register.html')
+# ---------- 初始化钩子：若无任何用户，强制跳转到 /init ----------
+@app.before_request
+def before_request():
+    # 允许访问静态文件、login、init 页面本身
+    if request.endpoint in ('login', 'init', 'static'):
+        return
+    # 如果数据库中没有用户，并且访问的不是 /init，则重定向
+    if database.get_user_count() == 0 and request.endpoint != 'init':
+        return redirect(url_for('init'))
 
 
+# ---------- 认证相关 ----------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -115,22 +100,96 @@ def login():
 
         user = database.get_user_by_username(username)
         if user is None or not check_password_hash(user[2], password):
-            # 统一返回错误，防止用户枚举
             return jsonify(success=False, message='用户名或密码错误'), 401
 
-        # 登录成功
+        # 登录成功，写入 session（user 元组：id, username, hash, role, created_at）
         session.clear()
         session['user_id'] = user[0]
         session['username'] = user[1]
+        session['role'] = user[3]
         return jsonify(success=True, message='登录成功！'), 200
 
+    # GET 请求
     return render_template('login.html')
+
+
+@app.route('/init', methods=['GET', 'POST'])
+def init():
+    """初始化管理员账户（仅在数据库无任何用户时可用）"""
+    # 如果已有用户，则拒绝服务
+    if database.get_user_count() > 0:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        if not verify_csrf_token(request.form.get('csrf_token')):
+            return jsonify(success=False, message='非法请求'), 400
+
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm', '')
+
+        if not username or not password:
+            return jsonify(success=False, message='用户名和密码不能为空'), 400
+        if not re.match(r'^[a-zA-Z0-9_]{3,20}$', username):
+            return jsonify(success=False, message='用户名需3-20位字母、数字或下划线'), 400
+        if len(password) < 6:
+            return jsonify(success=False, message='密码至少6位'), 400
+        if password != confirm:
+            return jsonify(success=False, message='两次密码不一致'), 400
+
+        password_hash = generate_password_hash(password)
+        user_id = database.create_user(username, password_hash, role='admin')
+        if user_id is None:
+            return jsonify(success=False, message='用户名已存在'), 400
+
+        # 自动登录
+        session.clear()
+        session['user_id'] = user_id
+        session['username'] = username
+        session['role'] = 'admin'
+        return jsonify(success=True, message='管理员注册成功！'), 200
+
+    return render_template('init.html')
 
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+@app.route('/admin', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_panel():
+    """管理员创建普通用户的面板"""
+    if request.method == 'POST':
+        if not verify_csrf_token(request.form.get('csrf_token')):
+            return jsonify(success=False, message='非法请求'), 400
+
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm', '')
+
+        if not username or not password:
+            return jsonify(success=False, message='用户名和密码不能为空'), 400
+        if not re.match(r'^[a-zA-Z0-9_]{3,20}$', username):
+            return jsonify(success=False, message='用户名需3-20位字母、数字或下划线'), 400
+        if len(password) < 6:
+            return jsonify(success=False, message='密码至少6位'), 400
+        if password != confirm:
+            return jsonify(success=False, message='两次密码不一致'), 400
+
+        password_hash = generate_password_hash(password)
+        user_id = database.create_user(username, password_hash, role='user')
+        if user_id is None:
+            return jsonify(success=False, message='用户名已存在'), 400
+
+        return jsonify(success=True, message=f'用户 "{username}" 创建成功！'), 200
+
+    # GET 请求：显示管理页面（含用户列表）
+    users = database.get_all_users()
+    return render_template('admin.html', users=users)
 
 
 # ---------- 文件管理路由（全部需要登录） ----------
@@ -149,7 +208,8 @@ def index():
                            folders=folders,
                            current_path=current_path,
                            max_content_length=app.config['MAX_CONTENT_LENGTH'],
-                           username=session['username'])
+                           username=session['username'],
+                           role=session.get('role'))
 
 
 @app.route('/upload', methods=['POST'])
@@ -203,7 +263,8 @@ def list_files():
                            files=files,
                            folders=folders,
                            current_path=current_path,
-                           username=session['username'])
+                           username=session['username'],
+                           role=session.get('role'))
 
 
 @app.route('/create-folder', methods=['POST'])
@@ -238,8 +299,7 @@ def download_file(file_id):
     if record is None:
         return "文件不存在", 404
 
-    # 权限检查：文件必须属于当前用户
-    # record 字段索引：0:id,1:original,2:stored,3:size,4:type,5:upload_time,6:path,7:relative_path,8:user_id
+    # 权限：文件必须属于当前用户
     if len(record) > 8 and record[8] != session['user_id']:
         return "无权访问该文件", 403
 

@@ -20,7 +20,11 @@
 </head>
 <body>
     <div class="user-bar">
-        欢迎，<strong>{{ username }}</strong> | <a href="{{ url_for('logout') }}">退出登录</a>
+        欢迎，<strong>{{ username }}</strong>
+        {% if role == 'admin' %}
+            | <a href="{{ url_for('admin_panel') }}">管理用户</a>
+        {% endif %}
+        | <a href="{{ url_for('logout') }}">退出登录</a>
     </div>
 
     <h1>文件管理</h1>

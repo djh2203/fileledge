@@ -2,29 +2,29 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>注册</title>
+    <title>初始化管理员</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 50px; }
         .error { color: red; }
     </style>
 </head>
 <body>
-    <h1>文件云盘 - 注册</h1>
-    <form id="register-form">
+    <h1>系统初始化 - 注册管理员账户</h1>
+    <p>首次使用，请创建一个管理员账号。</p>
+    <form id="init-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <p><input type="text" name="username" placeholder="用户名（字母、数字、下划线，3-20位）" required></p>
+        <p><input type="text" name="username" placeholder="管理员用户名" required></p>
         <p><input type="password" name="password" placeholder="密码（至少6位）" required></p>
         <p><input type="password" name="confirm" placeholder="确认密码" required></p>
-        <p><button type="submit">注册</button></p>
+        <p><button type="submit">创建管理员</button></p>
     </form>
-    <p>已有账号？<a href="{{ url_for('login') }}">去登录</a></p>
     <div id="message"></div>
 
     <script>
-        document.getElementById('register-form').addEventListener('submit', function(e) {
+        document.getElementById('init-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(this);
-            fetch('/register', { method: 'POST', body: formData })
+            fetch('/init', { method: 'POST', body: formData })
                 .then(res => res.json())
                 .then(data => {
                     const msg = document.getElementById('message');

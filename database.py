@@ -8,18 +8,20 @@ def init_db():
     """初始化数据库：创建所需的表（如果不存在）"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON;")   # 开启外键约束
 
-    # 用户表
+    # 用户表（增加 role 字段）
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
             created_at TEXT NOT NULL
         )
     ''')
 
-    # 文件表（增加 user_id）
+    # 文件表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +37,7 @@ def init_db():
         )
     ''')
 
-    # 文件夹表（增加 user_id）
+    # 文件夹表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS folders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,47 +54,72 @@ def init_db():
 
 
 # ---------- 用户相关操作 ----------
-def create_user(username, password_hash):
-    """创建新用户，返回新用户的 id，如果用户名已存在则返回 None"""
+def get_user_count():
+    """返回用户总数（用于判断是否已初始化）"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM users")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+def create_user(username, password_hash, role='user'):
+    """
+    创建新用户，返回新用户的 id，如果用户名已存在则返回 None
+    role 默认为 'user'，初始化管理员时可传入 'admin'
+    """
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     created_at = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
     try:
         cursor.execute('''
-            INSERT INTO users (username, password_hash, created_at)
-            VALUES (?, ?, ?)
-        ''', (username, password_hash, created_at))
+            INSERT INTO users (username, password_hash, role, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (username, password_hash, role, created_at))
         conn.commit()
         user_id = cursor.lastrowid
         return user_id
     except sqlite3.IntegrityError:
-        # 用户名重复
         return None
     finally:
         conn.close()
 
 def get_user_by_username(username):
-    """根据用户名查找用户，返回 (id, username, password_hash, created_at) 或 None"""
+    """根据用户名查找用户，返回 (id, username, password_hash, role, created_at) 或 None"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, password_hash, created_at FROM users WHERE username = ?", (username,))
+    cursor.execute(
+        "SELECT id, username, password_hash, role, created_at FROM users WHERE username = ?",
+        (username,)
+    )
     row = cursor.fetchone()
     conn.close()
     return row
 
 def get_user_by_id(user_id):
-    """根据用户 ID 查找用户"""
+    """根据用户 ID 查找用户，返回 (id, username, password_hash, role, created_at) 或 None"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, password_hash, created_at FROM users WHERE id = ?", (user_id,))
+    cursor.execute(
+        "SELECT id, username, password_hash, role, created_at FROM users WHERE id = ?",
+        (user_id,)
+    )
     row = cursor.fetchone()
     conn.close()
     return row
 
+def get_all_users():
+    """获取所有用户列表（管理员查看用），不返回密码哈希"""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, role, created_at FROM users ORDER BY id")
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
 
-# ---------- 文件操作（全部加上 user_id） ----------
+
+# ---------- 文件操作 ----------
 def add_file_record(original_name, stored_name, size, mime_type, saved_path, relative_path, user_id):
-    """插入一条文件上传记录"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     upload_time = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
@@ -105,7 +132,6 @@ def add_file_record(original_name, stored_name, size, mime_type, saved_path, rel
     conn.close()
 
 def get_files_by_path(relative_path, user_id):
-    """返回指定路径下的所有文件记录（仅限当前用户）"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute(
@@ -117,7 +143,6 @@ def get_files_by_path(relative_path, user_id):
     return rows
 
 def get_file_by_id(file_id):
-    """根据 ID 获取文件记录（不验证用户，调用方需要自己检查权限）"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
@@ -126,7 +151,6 @@ def get_file_by_id(file_id):
     return row
 
 def get_all_files():
-    """返回所有文件记录（兼容旧调用，之后不会被用到）"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM files ORDER BY id DESC")
@@ -135,9 +159,8 @@ def get_all_files():
     return rows
 
 
-# ---------- 文件夹操作（加上 user_id） ----------
+# ---------- 文件夹操作 ----------
 def add_folder(folder_path, user_id):
-    """插入文件夹记录"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     created_time = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
@@ -148,10 +171,8 @@ def add_folder(folder_path, user_id):
     conn.close()
 
 def get_folders(relative_path, user_id):
-    """返回指定路径下的直接子文件夹（仅限当前用户）"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    # 先获取当前用户的所有文件夹，再在 Python 里过滤
     cursor.execute(
         "SELECT folder_path FROM folders WHERE user_id = ?",
         (user_id,)
