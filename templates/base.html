@@ -1,0 +1,17 @@
+{# templates/base.html - 公共母版 #}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}文件云盘{% endblock %}</title>
+    {% block head_extra %}{% endblock %}
+    {% block head_scripts %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+
+    <!-- 页面底部公用的 JS 可以先空着，后续美化时再添加 -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

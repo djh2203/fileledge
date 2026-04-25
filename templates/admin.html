@@ -1,71 +1,72 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>用户管理</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 50px; }
-        .error { color: red; }
-        table { border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    </style>
-</head>
-<body>
-    <h1>用户管理</h1>
-    <p><a href="{{ url_for('index') }}">返回文件管理</a> | <a href="{{ url_for('logout') }}">退出登录</a></p>
+{% extends "base.html" %}
+{% block title %}用户管理{% endblock %}
 
-    <h2>创建新用户</h2>
-    <form id="create-user-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <p><input type="text" name="username" placeholder="用户名" required></p>
-        <p><input type="password" name="password" placeholder="密码（至少6位）" required></p>
-        <p><input type="password" name="confirm" placeholder="确认密码" required></p>
-        <p><button type="submit">创建用户</button></p>
-    </form>
-    <div id="message"></div>
+{% block head_extra %}
+<style>
+    body { font-family: Arial, sans-serif; margin: 50px; }
+    .error { color: red; }
+    table { border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+</style>
+{% endblock %}
 
-    <h2>现有用户列表</h2>
-    {% if users %}
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>用户名</th>
-            <th>角色</th>
-            <th>注册时间</th>
-        </tr>
-        {% for u in users %}
-        <tr>
-            <td>{{ u[0] }}</td>
-            <td>{{ u[1] }}</td>
-            <td>{{ u[2] }}</td>
-            <td>{{ u[3] }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% else %}
-    <p>暂无用户</p>
-    {% endif %}
+{% block content %}
+<h1>用户管理</h1>
 
-    <script>
-        document.getElementById('create-user-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            fetch('/admin', { method: 'POST', body: formData })
-                .then(res => res.json())
-                .then(data => {
-                    const msg = document.getElementById('message');
-                    if (data.success) {
-                        msg.innerHTML = '<span style="color:green;">' + data.message + '</span>';
-                        // 刷新页面以更新用户列表
-                        setTimeout(() => { location.reload(); }, 500);
-                    } else {
-                        msg.innerHTML = '<span class="error">' + data.message + '</span>';
-                    }
-                })
-                .catch(err => {
-                    document.getElementById('message').innerHTML = '<span class="error">网络错误</span>';
-                });
-        });
-    </script>
-</body>
-</html>
+<p><a href="{{ url_for('index') }}">返回文件管理</a> | <a href="{{ url_for('logout') }}">退出登录</a></p>
+
+<h2>创建新用户</h2>
+<form id="create-user-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p><input type="text" name="username" placeholder="用户名" required></p>
+    <p><input type="password" name="password" placeholder="密码（至少6位）" required></p>
+    <p><input type="password" name="confirm" placeholder="确认密码" required></p>
+    <p><button type="submit">创建用户</button></p>
+</form>
+<div id="message"></div>
+
+<h2>现有用户列表</h2>
+{% if users %}
+<table>
+    <tr>
+        <th>ID</th>
+        <th>用户名</th>
+        <th>角色</th>
+        <th>注册时间</th>
+    </tr>
+    {% for u in users %}
+    <tr>
+        <td>{{ u[0] }}</td>
+        <td>{{ u[1] }}</td>
+        <td>{{ u[2] }}</td>
+        <td>{{ u[3] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+
+<p>暂无用户</p>
+{% endif %}
+
+<script>
+    document.getElementById('create-user-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('/admin', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                const msg = document.getElementById('message');
+                if (data.success) {
+                    msg.innerHTML = '<span style="color:green;">' + data.message + '</span>';
+                    // 刷新页面以更新用户列表
+                    setTimeout(() => { location.reload(); }, 500);
+                } else {
+                    msg.innerHTML = '<span class="error">' + data.message + '</span>';
+                }
+            })
+            .catch(err => {
+                document.getElementById('message').innerHTML = '<span class="error">网络错误</span>';
+            });
+    });
+</script>
+{% endblock %}

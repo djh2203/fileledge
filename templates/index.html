@@ -1,131 +1,134 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>文件管理</title>
-    <style>
-        .success { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-        .folder-list { margin: 10px 0; }
-        .folder-list a { margin-right: 15px; text-decoration: none; color: #0066cc; }
-        .folder-list a:hover { text-decoration: underline; }
-        .breadcrumb { margin: 10px 0; }
-        .breadcrumb a { margin-right: 5px; }
-        .user-bar { margin-bottom: 10px; }
-    </style>
-    <script>
-        const MAX_FILE_SIZE = {{ max_content_length }};
-        const CURRENT_PATH = "{{ current_path }}";
-    </script>
-</head>
-<body>
-    <div class="user-bar">
-        欢迎，<strong>{{ username }}</strong>
-        {% if role == 'admin' %}
-            | <a href="{{ url_for('admin_panel') }}">管理用户</a>
-        {% endif %}
-        | <a href="{{ url_for('logout') }}">退出登录</a>
-    </div>
+{% extends "base.html" %}
+{% block title %}文件管理{% endblock %}
 
-    <h1>文件管理</h1>
+{% block head_extra %}
+<style>
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    .folder-list { margin: 10px 0; }
+    .folder-list a { margin-right: 15px; text-decoration: none; color: #0066cc; }
+    .folder-list a:hover { text-decoration: underline; }
+    .breadcrumb { margin: 10px 0; }
+    .breadcrumb a { margin-right: 5px; }
+    .user-bar { margin-bottom: 10px; }
+</style>
+<script>
+    const MAX_FILE_SIZE = {{ max_content_length }};
+    const CURRENT_PATH = "{{ current_path }}";
+</script>
+{% endblock %}
 
-    <!-- 面包屑导航 -->
-    <div class="breadcrumb">
-        <a href="{{ url_for('index', path='') }}">根目录</a>
-        {% set parts = current_path.strip('/').split('/') %}
-        {% set cumulative = '' %}
-        {% for part in parts if part %}
-            {% set cumulative = cumulative ~ part ~ '/' %}
-            / <a href="{{ url_for('index', path=cumulative) }}">{{ part }}</a>
-        {% endfor %}
-    </div>
-
-    <!-- 创建文件夹 -->
-    <div style="margin: 10px 0;">
-        <input type="text" id="new-folder-name" placeholder="新文件夹名">
-        <button onclick="createFolder()">创建文件夹</button>
-    </div>
-
-    <!-- 上传表单 -->
-    <form id="upload-form" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="path" value="{{ current_path }}">
-        <input type="file" name="file" required>
-        <button type="submit">上传</button>
-    </form>
-
-    <!-- 进度条容器 -->
-    <div id="progress-container" style="display: none; margin-top: 10px;">
-        <div id="progress-bar" style="width: 0%; height: 20px; background-color: #4CAF50; text-align: center; line-height: 20px; color: white;">0%</div>
-    </div>
-    <div id="upload-status" style="margin-top: 5px;"></div>
-
-    <!-- 文件夹列表 -->
-    {% if folders %}
-    <div class="folder-list">
-        <strong>文件夹：</strong>
-        {% for folder in folders %}
-            <a href="{{ url_for('index', path=folder.path) }}">{{ folder.name }}/</a>
-        {% endfor %}
-    </div>
+{% block content %}
+<div class="user-bar">
+    欢迎，<strong>{{ username }}</strong>
+    {% if role == 'admin' %}
+        | <a href="{{ url_for('admin_panel') }}">管理用户</a>
     {% endif %}
+    | <a href="{{ url_for('logout') }}">退出登录</a>
+</div>
 
-    <!-- 文件列表 -->
-    {% if files %}
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>文件名</th>
-            <th>大小</th>
-            <th>类型</th>
-            <th>上传时间</th>
-        </tr>
-        {% for file in files %}
-        <tr>
-            <td>{{ file[0] }}</td>
-            <td><a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a></td>
-            <td>{{ file[3] | filesizeformat }}</td>
-            <td>{{ file[4] }}</td>
-            <td>{{ file[5] }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% else %}
-    <p>该目录下没有文件。</p>
-    {% endif %}
+<h1>文件管理</h1>
 
-    <script>
-    function createFolder() {
-        const nameInput = document.getElementById('new-folder-name');
-        const folderName = nameInput.value.trim();
-        if (!folderName) {
-            alert('请输入文件夹名');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('path', CURRENT_PATH);
-        formData.append('folder_name', folderName);
-        // 添加 csrf token（从页面隐藏域获取）
-        const csrfInput = document.querySelector('input[name="csrf_token"]');
-        if (csrfInput) formData.append('csrf_token', csrfInput.value);
+<!-- 面包屑导航 -->
+<div class="breadcrumb">
+    <a href="{{ url_for('index', path='') }}">根目录</a>
+    {% set parts = current_path.strip('/').split('/') %}
+    {% set cumulative = '' %}
+    {% for part in parts if part %}
+        {% set cumulative = cumulative ~ part ~ '/' %}
+        / <a href="{{ url_for('index', path=cumulative) }}">{{ part }}</a>
+    {% endfor %}
+</div>
 
-        fetch('/create-folder', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.message || '创建失败');
-            }
-        })
-        .catch(err => {
-            alert('请求失败');
-        });
+<!-- 创建文件夹 -->
+<div style="margin: 10px 0;">
+    <input type="text" id="new-folder-name" placeholder="新文件夹名">
+    <button onclick="createFolder()">创建文件夹</button>
+</div>
+
+<!-- 上传表单 -->
+<form id="upload-form" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="path" value="{{ current_path }}">
+    <input type="file" name="file" required>
+    <button type="submit">上传</button>
+</form>
+
+<!-- 进度条容器 -->
+<div id="progress-container" style="display: none; margin-top: 10px;">
+    <div id="progress-bar" style="width: 0%; height: 20px; background-color: #4CAF50; text-align: center; line-height: 20px; color: white;">0%</div>
+</div>
+<div id="upload-status" style="margin-top: 5px;"></div>
+
+<!-- 文件夹列表 -->
+{% if folders %}
+<div class="folder-list">
+    <strong>文件夹：</strong>
+    {% for folder in folders %}
+        <a href="{{ url_for('index', path=folder.path) }}">{{ folder.name }}/</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 文件列表 -->
+{% if files %}
+<table>
+    <tr>
+        <th>ID</th>
+        <th>文件名</th>
+        <th>大小</th>
+        <th>类型</th>
+        <th>上传时间</th>
+    </tr>
+    {% for file in files %}
+    <tr>
+        <td>{{ file[0] }}</td>
+        <td><a href="{{ url_for('download_file', file_id=file[0]) }}">{{ file[1] }}</a></td>
+        <td>{{ file[3] | filesizeformat }}</td>
+        <td>{{ file[4] }}</td>
+        <td>{{ file[5] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+
+<p>该目录下没有文件。</p>
+{% endif %}
+
+<script>
+function createFolder() {
+    const nameInput = document.getElementById('new-folder-name');
+    const folderName = nameInput.value.trim();
+    if (!folderName) {
+        alert('请输入文件夹名');
+        return;
     }
-    </script>
-    <script src="{{ url_for('static', filename='upload.js') }}"></script>
-</body>
-</html>
+    const formData = new FormData();
+    formData.append('path', CURRENT_PATH);
+    formData.append('folder_name', folderName);
+    // 添加 csrf token（从页面隐藏域获取）
+    const csrfInput = document.querySelector('input[name="csrf_token"]');
+    if (csrfInput) formData.append('csrf_token', csrfInput.value);
+
+    fetch('/create-folder', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '创建失败');
+        }
+    })
+    .catch(err => {
+        alert('请求失败');
+    });
+}
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='upload.js') }}"></script>
+{% endblock %}
