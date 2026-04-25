@@ -1,0 +1,11 @@
+/* static/style.css */
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f7f9fc;
+}
+
+/* 全局错误消息样式 */
+.error {
+    color: red;
+    font-weight: bold;
+}

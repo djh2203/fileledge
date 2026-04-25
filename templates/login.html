@@ -2,26 +2,36 @@
 {% block title %}登录{% endblock %}
 
 {% block head_extra %}
-<style>
-    body { font-family: Arial, sans-serif; margin: 50px; }
-    .error { color: red; }
-</style>
+{# 大部分样式已移到 style.css，这里只保留页面独有的 #}
 {% endblock %}
 
 {% block content %}
-<h1>文件云盘 - 登录</h1>
-<form id="login-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <p><input type="text" name="username" placeholder="用户名" required></p>
-    <p><input type="password" name="password" placeholder="密码" required></p>
-    <p><button type="submit">登录</button></p>
-</form>
-
-<p>如需账号，请联系管理员。</p>
-<div id="message"></div>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h3 class="card-title text-center mb-4">文件云盘 - 登录</h3>
+                    <form id="login-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" name="username" placeholder="用户名" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="password" class="form-control" name="password" placeholder="密码" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">登录</button>
+                    </form>
+                    <p class="mt-3 mb-0 text-center text-muted small">如需账号，请联系管理员。</p>
+                    <div id="message" class="mt-2 text-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-    // 登录 JS 原样保留
+    // 原有登录 JS 不动
     document.getElementById('login-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const formData = new FormData(this);
@@ -30,14 +40,18 @@
             .then(data => {
                 const msg = document.getElementById('message');
                 if (data.success) {
-                    msg.innerHTML = '<span style="color:green;">登录成功，正在跳转...</span>';
+                    msg.textContent = '登录成功，正在跳转...';
+                    msg.className = 'text-success';
                     setTimeout(() => { location.href = '/'; }, 500);
                 } else {
-                    msg.innerHTML = '<span class="error">' + data.message + '</span>';
+                    msg.textContent = data.message;
+                    msg.className = 'error';
                 }
             })
             .catch(err => {
-                document.getElementById('message').innerHTML = '<span class="error">网络错误</span>';
+                const msg = document.getElementById('message');
+                msg.textContent = '网络错误';
+                msg.className = 'error';
             });
     });
 </script>
