@@ -1,3 +1,6 @@
+# 自动生成的密钥配置文件
+secret_config.py
+
 venv/
 uploads/
 uploads.db

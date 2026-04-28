@@ -13,11 +13,59 @@ from flask import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_compress import Compress
+
+# ---------- 自动管理 SECRET_KEY ----------
+SECRET_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'secret_config.py')
+
+
+def load_or_create_secret_key():
+    # 1. 优先使用环境变量（便于生产部署覆盖）
+    env_key = os.environ.get('SECRET_KEY')
+    if env_key:
+        return env_key
+
+    # 2. 如果配置文件存在，解析读取
+    if os.path.exists(SECRET_CONFIG_FILE):
+        try:
+            with open(SECRET_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    # 匹配格式：SECRET_KEY = 'xxxxxxxx'
+                    if line.startswith("SECRET_KEY = '") and line.endswith("'"):
+                        return line[len("SECRET_KEY = '"):-1]
+            # 未找到有效行，视为损坏，删除后重新生成
+            print(f"[WARN] 配置文件 {SECRET_CONFIG_FILE} 格式无效，将重新生成")
+            os.remove(SECRET_CONFIG_FILE)
+        except Exception as e:
+            print(f"[ERROR] 读取配置文件失败: {e}，将重新生成")
+            try:
+                os.remove(SECRET_CONFIG_FILE)
+            except OSError:
+                pass
+
+    # 3. 生成新密钥并写入文件
+    new_key = secrets.token_hex(24)
+    try:
+        with open(SECRET_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            f.write("# 自动生成的 Flask 密钥，请勿泄露\n")
+            f.write(f"SECRET_KEY = '{new_key}'\n")
+        print(f"[INFO] 已自动生成密钥文件：{SECRET_CONFIG_FILE}")
+    except IOError as e:
+        print(f"[ERROR] 无法写入密钥文件 {SECRET_CONFIG_FILE}: {e}")
+        print("[WARN] 本次使用临时密钥，用户会话重启后可能失效")
+        return secrets.token_hex(24)
+
+    return new_key
+
 
 database.init_db()
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)   # 生产环境请改为固定强密码
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+Compress(app)
+app.secret_key = load_or_create_secret_key()
 
 # ---------- 读取最大文件大小限制 ----------
 with open('config.json', 'r', encoding='utf-8') as f:
@@ -398,4 +446,4 @@ def handle_file_too_large(e):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
