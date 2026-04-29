@@ -143,12 +143,13 @@
    venv\Scripts\activate      # Windows
    ```
 
-3. **安装依赖**  
+3. **安装依赖**
    在项目根目录创建 `requirements.txt` 文件：
    ```text
    Flask
    Werkzeug
    flask-compress
+   gunicorn
    ```
    然后执行：
    ```bash
@@ -223,7 +224,7 @@
 | 常量 | 说明 |
 |------|------|
 | `app.config['UPLOAD_FOLDER']` | 上传文件存储目录，默认为 `uploads` |
-| `app.secret_key` | Flask 会话加密密钥。**开发环境**使用 `secrets.token_hex(16)` 随机生成，**生产环境必须改为固定强随机字符串**（如 `os.urandom(24).hex()` 生成后写入配置） |
+| `app.secret_key` | Flask 会话加密密钥。应用首次启动会自动在项目根目录生成 `secret_config.py` 保存固定密钥。**生产环境**建议通过环境变量自定义：`export SECRET_KEY="your-generated-secret-key"` |
 | 数据库路径 | 在 `database.py` 中由 `DATABASE = 'uploads.db'` 定义，如需修改可调整该变量 |
 
 ---
@@ -240,20 +241,20 @@
 pip install gunicorn flask-compress
 ```
 
-### 2. 启用 Gzip 压缩
+### 2. 密钥管理（推荐）
 
-在 `server.py` 中添加：
+应用已内置自动密钥管理功能：
+- **首次启动**：自动在项目根目录生成 `secret_config.py`，保存固定密钥
+- **生产环境**：建议通过环境变量自定义密钥，避免文件写入：
+  ```bash
+  export SECRET_KEY="your-generated-secret-key"
+  ./start.sh
+  ```
+- **关闭调试模式**：确保 `debug=False`（代码已默认关闭）
 
-```python
-from flask_compress import Compress
-Compress(app)
-```
+### 3. 启用 Gzip 压缩和代理头修正
 
-### 3. 修改 `server.py`
-
-- 移除或注释掉 `app.run(debug=True)`
-- 将 `app.secret_key` 替换为固定随机字符串（例如：`app.secret_key = 'your-generated-secret-key'`）
-- 保留末尾的 `if __name__ == '__main__': app.run()` 块（方便开发时直接 `python server.py` 运行，不影响 Gunicorn 部署）
+应用已自动启用 Gzip 压缩和代理头修正（`ProxyFix`），无需额外配置。`ProxyFix` 确保应用通过反向代理时能正确获取客户端真实 IP。
 
 ### 4. 静态文件缓存（可选）
 
@@ -269,12 +270,28 @@ def add_cache_headers(response):
 
 ### 5. 使用 Gunicorn 启动
 
+方式一：直接使用命令行
+
 ```bash
-gunicorn -w 4 -b 127.0.0.1:8000 server:app
+gunicorn -w 4 -b 127.0.0.1:5000 server:app
 ```
 
 - `-w` 指定 worker 进程数
 - `server:app` 表示从 `server.py` 导入 Flask 实例 `app`
+
+方式二：使用项目提供的 `start.sh` 脚本（推荐）
+
+```bash
+# 先激活虚拟环境
+source venv/bin/activate   # Linux/Mac
+# 或 venv\Scripts\activate   # Windows
+
+# 在 start.sh 中设置环境变量 SECRET_KEY（可选）
+# 然后执行脚本
+./start.sh
+```
+
+注意：`start.sh` 使用单 worker 模式（`-w 1`）以避免 session 丢失，可根据服务器配置调整。
 
 ### 6. 配置 Nginx 反向代理
 
@@ -288,7 +305,7 @@ server {
     client_max_body_size 100m;   # 需与 config.json 中 max_file_size_mb 一致
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -324,7 +341,7 @@ app.config.update(
 
 ## 安全注意事项
 
-- **务必修改 Secret Key**：生产环境请生成一个强随机字符串固定写入 `server.py`，勿使用每次重启变化的临时密钥
+- **密钥管理**：应用首次启动会自动生成固定密钥到 `secret_config.py`。生产环境建议通过环境变量自定义密钥：`export SECRET_KEY="your-generated-secret-key"`
 - **关闭调试模式**：切勿在生产环境开启 Flask 的 `debug=True`
 - **限制上传目录访问**：通过 Nginx 配置禁止直接访问 `/uploads` 路径，所有文件获取必须经过应用鉴权
 - **保护数据库**：`uploads.db` 不要直接暴露在 Web 可访问目录下
