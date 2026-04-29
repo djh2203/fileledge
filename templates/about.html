@@ -1,0 +1,774 @@
+{% extends "base.html" %}
+{% block title %}关于 Fileledge - 轻量私有云盘{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* ========== 平滑滚动 ========== */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* ========== 修复 body 滚动 ========== */
+    body#vanta-bg,
+    body#vanta-bg-body {
+        position: relative !important;
+        height: auto !important;
+        min-height: 100vh;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
+    /* ========== 修复标题被导航栏遮挡 ========== */
+    h2 {
+        scroll-margin-top: 100px;
+        padding-top: 80px;
+        margin-top: -20px;
+    }
+
+    /* ========== Vanta 背景轻柔化覆盖层 ========== */
+    .vanta-soft-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.28);
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    /* ========== 内容区域 ========== */
+    .about-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* ========== 英雄区 ========== */
+    .hero-section {
+        text-align: center;
+        padding: 60px 20px 40px;
+    }
+    .hero-icon {
+        font-size: 72px;
+        display: block;
+        margin-bottom: 10px;
+        animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-12px); }
+    }
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 700;
+        color: #00469c;
+        letter-spacing: -0.5px;
+    }
+    .hero-subtitle {
+        font-size: 1.15rem;
+        color: #555;
+        margin-bottom: 20px;
+    }
+    .hero-badges img {
+        margin: 4px 3px;
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    /* ========== 导航栏（about 页面专用） ========== */
+    .about-navbar {
+        background-color: #00469c !important;
+        backdrop-filter: none;
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+    }
+    .about-navbar .navbar-brand,
+    .about-navbar .nav-link {
+        color: #ffffff !important;
+        font-weight: 500;
+    }
+    .about-navbar .nav-link:hover {
+        color: #cce4ff !important;
+    }
+    .about-navbar .navbar-toggler {
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    .about-navbar .navbar-toggler-icon {
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3e%3cpath stroke='rgba(255,255,255,0.8)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    }
+
+    /* ========== 卡片悬停动画 ========== */
+    .about-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        background-color: rgba(255, 255, 255, 0.94) !important;
+        backdrop-filter: blur(6px);
+    }
+    .about-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.13) !important;
+    }
+
+    /* ========== 特性标签 ========== */
+    .feature-pill {
+        display: inline-block;
+        background: #e8f0fe;
+        color: #00469c;
+        border-radius: 50px;
+        padding: 6px 16px;
+        margin: 3px 4px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    /* ========== 技术栈表格 ========== */
+    .tech-table {
+        border-left: 4px solid #2ea44f;
+        table-layout: fixed;
+        width: 100%;
+        word-break: break-word;
+    }
+    .tech-table th {
+        background-color: #f0f7f0;
+        color: #1a5c2a;
+        font-weight: 600;
+        width: 140px;
+    }
+    .tech-table td,
+    .tech-table th {
+        overflow-wrap: break-word;
+        word-break: break-word;
+        vertical-align: middle;
+    }
+    .tech-table code {
+        white-space: normal;
+        word-break: break-all;
+    }
+
+    /* 移动端表格优化 */
+    @media (max-width: 768px) {
+        .tech-table th {
+            width: 100px;
+        }
+    }
+
+    /* ========== 项目结构树 ========== */
+    .tree-block {
+        background-color: #f8f9fa;
+        border-left: 4px solid #2ea44f;
+        padding: 18px 22px;
+        border-radius: 6px;
+        font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+        font-size: 0.9rem;
+        line-height: 1.7;
+        color: #333;
+        overflow-x: auto;
+        white-space: pre;
+    }
+
+    /* ========== 终端风格代码块 ========== */
+    .terminal-block {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        padding: 18px 22px;
+        border-radius: 8px;
+        font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+        font-size: 0.88rem;
+        line-height: 1.65;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        position: relative;
+    }
+    .terminal-block::before {
+        content: '';
+        display: block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ff5f56;
+        box-shadow: 18px 0 0 #ffbd2e, 36px 0 0 #27c93f;
+        margin-bottom: 10px;
+        opacity: 0.8;
+    }
+
+    /* ========== 折叠面板美化 ========== */
+    details.about-details {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.85);
+        transition: box-shadow 0.2s;
+    }
+    details.about-details[open] {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    }
+    details.about-details summary {
+        font-weight: 600;
+        cursor: pointer;
+        color: #00469c;
+        font-size: 1.02rem;
+        user-select: none;
+        padding: 4px 0;
+    }
+    details.about-details summary:hover {
+        color: #002d6b;
+    }
+    details.about-details .details-inner {
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px dashed #e0e0e0;
+    }
+
+    /* ========== 警告框 ========== */
+    .alert-soft-warning {
+        background-color: #fff8e1;
+        border-left: 4px solid #f0a500;
+        color: #6d4c00;
+    }
+    .alert-soft-danger {
+        background-color: #ffebee;
+        border-left: 4px solid #d32f2f;
+        color: #7f0000;
+    }
+
+    /* ========== 页脚 ========== */
+    .about-footer {
+        text-align: center;
+        padding: 30px 20px;
+        color: #777;
+        font-size: 0.88rem;
+        border-top: 1px solid #eaeaea;
+        margin-top: 40px;
+    }
+    .about-footer a {
+        color: #00469c;
+        text-decoration: none;
+    }
+    .about-footer a:hover {
+        text-decoration: underline;
+    }
+
+    /* ========== 响应式微调 ========== */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+        .hero-icon {
+            font-size: 52px;
+        }
+        .hero-badges img {
+            margin: 2px 1px;
+        }
+        .terminal-block,
+        .tree-block {
+            font-size: 0.78rem;
+            padding: 12px 14px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Vanta 轻柔化覆盖层 -->
+<div class="vanta-soft-overlay"></div>
+
+<!-- 所有内容放在上层 -->
+<div class="about-content">
+
+    <!-- ==================== 导航栏 ==================== -->
+    <nav class="navbar navbar-expand-lg about-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/about">
+                📁 Fileledge
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#aboutNavRight">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="aboutNavRight">
+                <div class="navbar-nav ms-auto">
+                    {% if session.get('user_id') %}
+                        <a class="nav-link" href="{{ url_for('index') }}">文件管理</a>
+                        {% if session.get('role') == 'admin' %}
+                            <a class="nav-link" href="{{ url_for('admin_panel') }}">用户管理</a>
+                        {% endif %}
+                        <a class="nav-link" href="{{ url_for('logout') }}">退出登录</a>
+                    {% else %}
+                        <a class="nav-link" href="{{ url_for('login') }}">登录</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== 1. 英雄区（Hero） ==================== -->
+    <section class="hero-section">
+        <span class="hero-icon">📁</span>
+        <h1 class="hero-title">Fileledge</h1>
+        <p class="hero-subtitle">青岛大学徳雷克联合学院私有云盘</p>
+        <div class="hero-badges">
+            <img src="https://img.shields.io/badge/Fileledge-轻量私有云盘-2ea44f?style=for-the-badge&logo=icloud&logoColor=white" alt="Fileledge 轻量私有云盘">
+            <img src="https://img.shields.io/badge/Python-3.7+-blue.svg?logo=python&logoColor=white" alt="Python 3.7+">
+            <img src="https://img.shields.io/badge/Flask-2.x-lightgrey.svg?logo=flask&logoColor=white" alt="Flask">
+            <img src="https://img.shields.io/badge/数据库-SQLite-brightgreen.svg?logo=sqlite&logoColor=white" alt="SQLite">
+            <img src="https://img.shields.io/badge/许可证-MIT-yellow.svg" alt="MIT License">
+            <img src="https://img.shields.io/badge/维护者-djh2203-orange.svg" alt="djh2203">
+            <div class="mt-3">
+                <a href="https://github.com/djh2203/fileledge" target="_blank" rel="noopener"
+                   class="btn btn-outline-light btn-lg"
+                   style="background-color: #24292e; border-color: #444; color: #fff;
+                          transition: all 0.2s;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                                 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                                 -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87
+                                 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+                                 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12
+                                 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04
+                                 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15
+                                 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+                                 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 2. 介绍卡片区 ==================== -->
+    <div class="container mb-4">
+        <div class="card about-card shadow-sm">
+            <div class="card-body text-center py-3">
+                <span class="feature-pill">多用户隔离</span>
+                <span class="feature-pill">文件夹管理</span>
+                <span class="feature-pill">上传进度</span>
+                <span class="feature-pill">CSRF 防护</span>
+                <span class="feature-pill">移动端适配</span>
+                <span class="feature-pill">密码哈希</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 3. 功能特性（两栏卡片） ==================== -->
+    <div class="container mb-5">
+                <h2 class="text-center mb-4" style="color: #00469c; font-weight: 700;">功能特性</h2>
+        <div class="row g-4">
+            <!-- 左栏 -->
+            <div class="col-md-6">
+                <!-- 多用户与文件管理 -->
+                <div class="card about-card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color: #00469c;">多用户支持</h5>
+                        <ul class="mb-3" style="font-size: 0.93rem;">
+                            <li><strong>首次初始化：</strong>系统首次启动时强制创建唯一管理员账户</li>
+                            <li><strong>管理员面板：</strong>管理员可在 Web 界面中创建普通用户并查看用户列表</li>
+                            <li><strong>用户隔离：</strong>每个用户的上传文件、文件夹均通过 <code>user_id</code> 进行数据库级与逻辑隔离</li>
+                        </ul>
+                        
+                        <h5 class="card-title" style="color: #00469c;">文件管理</h5>
+                        <ul class="mb-0" style="font-size: 0.93rem;">
+                            <li><strong>文件夹操作：</strong>支持创建子文件夹，面包屑导航跳转</li>
+                            <li><strong>递归删除：</strong>管理员可删除文件夹及其所有子内容</li>
+                            <li><strong>文件名截断：</strong>超过 25 字符显示省略号，悬停可见全名</li>
+                            <li><strong>文件上传：</strong>支持任意类型，前端体积校验 + 实时进度条</li>
+                            <li><strong>文件下载：</strong>通过动态路由提供下载，校验归属权限</li>
+                            <li><strong>存储方式：</strong>文件以时间戳重命名，保存在 <code>uploads/&lt;user_id&gt;/</code> 目录</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- 右栏 -->
+            <div class="col-md-6">
+                <!-- 安全机制与界面 -->
+                <div class="card about-card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color: #00469c;">安全机制</h5>
+                        <ul class="mb-3" style="font-size: 0.93rem;">
+                            <li><strong>密码哈希：</strong>所有用户密码通过 <code>werkzeug.security</code> 加密存储，不可逆</li>
+                            <li><strong>CSRF 防护：</strong>全局生成并校验 CSRF Token，防止跨站请求伪造</li>
+                            <li><strong>登录保护：</strong>所有文件管理路由均使用 <code>login_required</code> 装饰器验证会话</li>
+                            <li><strong>管理员专属：</strong><code>/admin</code> 路由被 <code>admin_required</code> 装饰器保护</li>
+                            <li><strong>初始化钩子：</strong>无用户时强制重定向至 <code>/init</code> 页面</li>
+                            <li><strong>路径穿越防护：</strong><code>is_safe_path()</code> 函数防止访问 <code>uploads/</code> 以外的文件</li>
+                        </ul>
+
+                        <h5 class="card-title" style="color: #00469c;">界面</h5>
+                        <ul class="mb-0" style="font-size: 0.93rem;">
+                            <li><strong>响应式布局：</strong>基于 Bootstrap 5，深蓝导航栏，Vanta.js 动态背景</li>
+                            <li><strong>面包屑导航：</strong>方便浏览多级目录</li>
+                            <li><strong>移动端适配：</strong>表格横向滑动、汉堡菜单折叠导航、文件名截断显示</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 5. 项目结构树 ==================== -->
+    <div class="container mb-5">
+                <h2 class="text-center mb-4" style="color: #00469c; font-weight: 700;">项目结构</h2>
+        <div class="card about-card shadow-sm">
+            <div class="card-body">
+                <pre class="tree-block">项目根目录/
+├── server.py               # Flask 主程序（路由、视图、认证）
+├── database.py             # 数据库初始化与 CRUD 操作
+├── config.json             # 配置文件（最大上传文件大小）
+├── requirements.txt        # Python 依赖
+├── static/
+│   ├── style.css           # 全局自定义样式
+│   └── upload.js           # 上传进度及 AJAX 处理脚本
+├── templates/
+│   ├── base.html           # 公共母版（含 Bootstrap、Vanta）
+│   ├── index.html          # 文件管理主页
+│   ├── login.html          # 登录页面
+│   ├── init.html           # 首次初始化管理员页面
+│   ├── admin.html          # 管理员用户列表
+│   ├── admin_user_files.html # 管理员管理用户文件
+│   └── about.html          # 项目宣传页（本页面）
+├── uploads.db              # SQLite 数据库文件（运行后自动生成）
+└── uploads/                # 用户上传文件的物理存储目录（运行后自动生成）
+    └── &lt;user_id&gt;/          # 按用户 ID 隔离存储</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 6. 快速开始 ==================== -->
+    <div class="container mb-5">
+                <h2 class="text-center mb-4" style="color: #00469c; font-weight: 700;">快速开始</h2>
+        <div class="card about-card shadow-sm">
+            <div class="card-body">
+                <p class="text-muted mb-3">适用于本地开发 / 测试 · 要求 Python 3.7+ 及 pip</p>
+                <ol style="font-size: 0.95rem; line-height: 2;">
+                    <li>
+                        <strong>获取代码</strong>：克隆或解压项目源码到本地
+                    </li>
+                    <li>
+                        <strong>创建虚拟环境</strong>（推荐）：
+                        <pre class="terminal-block">python -m venv venv
+source venv/bin/activate   # Linux/Mac
+venv\Scripts\activate      # Windows</pre>
+                    </li>
+                    <li>
+                        <strong>安装依赖</strong>（（<code>requirements.txt</code> 内容：<code>Flask</code>、、<code>Werkzeug</code>、、<code>flask-compress</code>、、<code>gunicorn</code>）：
+                        <pre class="terminal-block">pip install -r requirements.txt</pre>
+                    </li>
+                    <li>
+                        <strong>检查配置</strong>：<code>config.json</code> 中 <code>max_file_size_mb</code> 默认值为 <code>100</code>，可按需修改
+                    </li>
+                    <li>
+                        <strong>清理旧数据</strong>（如有需要）：删除 <code>uploads.db</code> 即可重新初始化管理员
+                    </li>
+                    <li>
+                        <strong>启动应用</strong>：
+                        <pre class="terminal-block">python server.py</pre>
+                        服务将在 <code>http://127.0.0.1:5000</code> 运行
+                    </li>
+                    <li>
+                        <strong>初始化管理员</strong>：浏览器访问上述地址，系统会自动跳转到 <code>/init</code> 页面完成注册并自动登录
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 7. 使用指南（折叠面板） ==================== -->
+    <div class="container mb-5">
+                <h2 class="text-center mb-4" style="color: #00469c; font-weight: 700;">使用指南</h2>
+        <div class="card about-card shadow-sm">
+            <div class="card-body">
+
+                <details class="about-details">
+                    <summary>初始化管理员</summary>
+                    <div class="details-inner">
+                        <ul>
+                            <li>首次访问系统（无任何用户）时，任何路径都会被重定向至 <code>/init</code></li>
+                            <li>输入管理员用户名、密码及确认密码</li>
+                            <li>用户名仅允许 <strong>3~20</strong> 位字母、数字或下划线；密码至少 <strong>6</strong> 位</li>
+                            <li>创建成功后自动登录并跳转到文件管理页面</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>管理员操作</summary>
+                    <div class="details-inner">
+                        <ul>
+                            <li><strong>创建普通用户：</strong>登录后点击"管理用户"进入 <code>/admin</code> 面板，填写新用户信息即可创建</li>
+                            <!-- <li><strong>管理任意用户的文件：</strong>在用户列表点击"管理文件"进入对应用户的文件浏览器，可删除单个文件或整个文件夹（含递归删除）</li> -->
+                            <li><strong>文件管理：</strong>与普通用户界面相同，可上传、下载、创建文件夹，数据同样隔离存储</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>普通用户操作</summary>
+                    <div class="details-inner">
+                        <ul>
+                            <li>使用管理员创建的账号在 <code>/login</code> 页面登录</li>
+                            <li><strong>浏览文件：</strong>登录后进入根目录，通过面包屑导航进入子文件夹</li>
+                            <li><strong>创建文件夹：</strong>填写文件夹名（不能包含 <code>/ \ : * ? " &lt; &gt; |</code> 等字符），点击创建</li>
+                            <li><strong>上传文件：</strong>选择文件 → 点击"上传"，前端校验体积并显示进度条</li>
+                            <li><strong>下载文件：</strong>点击文件列表中的文件名即可下载原始文件</li>
+                            <li><strong>移动端使用：</strong>文件名超过 25 字符会自动截断并显示 "..."，可横向滑动表格；手机端点击汉堡按钮展开菜单</li>
+                        </ul>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 8. 部署与安全 ==================== -->
+    <div class="container mb-5">
+                <h2 class="text-center mb-4" style="color: #00469c; font-weight: 700;">部署与安全</h2>
+        <div class="card about-card shadow-sm">
+            <div class="card-body">
+
+                <details class="about-details">
+                    <summary>Gunicorn 启动（生产环境推荐）</summary>
+                    <div class="details-inner">
+                        <pre class="terminal-block"># 安装
+pip install gunicorn flask-compress
+
+# 启动（4 worker）
+gunicorn -w 4 -b 127.0.0.1:5000 server:app
+
+# 或使用项目提供的 start.sh 脚本
+./start.sh</pre>
+                        <p class="text-muted small mt-2">应用已自动启用 Gzip 压缩和代理头修正（（<code>ProxyFix</code>），无需额外配置。</p>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>Nginx 反向代理配置</summary>
+                    <div class="details-inner">
+                        <pre class="terminal-block">server {
+    listen 80;
+    server_name your-domain.com;
+
+    client_max_body_size 100m;   # 需与 config.json 中 max_file_size_mb 一致
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 禁止直接访问 uploads 目录（所有下载均通过 /download 路由提供）
+    location /uploads {
+        deny all;
+    }
+}</pre>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>HTTPS 配置（推荐）</summary>
+                    <div class="details-inner">
+                        <p>使用 Let's Encrypt 获取证书，并配置 Nginx 监听 443 端口。同时在 <code>server.py</code> 中设置：</p>
+                        <pre class="terminal-block">app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+)</pre>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>进程管理</summary>
+                    <div class="details-inner">
+                        <p>可使用 <code>systemd</code> 或 <code>supervisor</code> 管理 Gunicorn 服务，保证后台运行及开机自启。</p>
+                    </div>
+                </details>
+
+                <!-- 安全注意事项 -->
+                <h5 class="mt-4 mb-3" style="color: #b45309;">安全注意事项</h5>
+                <div class="alert alert-soft-warning p-3 mb-2" role="alert">
+                    <strong>密钥管理：</strong>应用首次启动会自动生成固定密钥到 <code>secret_config.py</code>。生产环境建议通过环境变量自定义：<code>export SECRET_KEY="your-generated-secret-key"</code>
+                </div>
+                <div class="alert alert-soft-danger p-3 mb-2" role="alert">
+                    <strong>关闭调试模式：</strong>切勿在生产环境开启 Flask 的 <code>debug=True</code>
+                </div>
+                <div class="alert alert-soft-warning p-3 mb-2" role="alert">
+                    <strong>限制上传目录访问：</strong>通过 Nginx 配置禁止直接访问 <code>/uploads</code> 路径，所有文件获取必须经过应用鉴权
+                </div>
+                <div class="alert alert-soft-warning p-3 mb-2" role="alert">
+                    <strong>保护数据库：</strong><code>uploads.db</code> 不要直接暴露在 Web 可访问目录下
+                </div>
+                <div class="alert alert-soft-warning p-3 mb-2" role="alert">
+                    <strong>定期备份：</strong>定期复制 <code>uploads/</code> 文件夹和 <code>uploads.db</code> 文件以保证数据安全
+                </div>
+                <div class="alert alert-soft-warning p-3 mb-2" role="alert">
+                    <strong>CSRF 保护：</strong>所有 POST 请求（包括删除操作）均验证 CSRF Token
+                </div>
+                <div class="alert alert-soft-warning p-3 mb-0" role="alert">
+                    <strong>文件类型白名单（可扩展）：</strong>当前未限制文件类型，若需提高安全性，可在上传逻辑中增加 MIME 或扩展名白名单校验
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 9. 常见问题 ==================== -->
+    <div class="container mb-5">
+                <h2 class="text-center mb-4" style="color: #00469c; font-weight: 700;">常见问题</h2>
+        <div class="card about-card shadow-sm">
+            <div class="card-body">
+
+                <details class="about-details">
+                    <summary>Q：首次访问没有跳转到初始化页面，而是直接显示登录页？</summary>
+                    <div class="details-inner">
+                        <p>请检查是否存在 <code>uploads.db</code> 并且其中已有用户数据（例如之前的残留数据）。删除该文件及 <code>uploads/</code> 目录后重启服务即可。</p>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>Q：上传大文件时失败，提示文件过大？</summary>
+                    <div class="details-inner">
+                        <p>首先确认 <code>config.json</code> 中的 <code>max_file_size_mb</code>；如果使用了 Nginx 反向代理，还需确保 <code>client_max_body_size</code> 的值不小于该配置。</p>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>Q：管理员忘记密码怎么办？</summary>
+                    <div class="details-inner">
+                        <p>目前没有内置密码重置功能。可通过 Python 交互环境手动重置：</p>
+                        <pre class="terminal-block">from werkzeug.security import generate_password_hash
+import sqlite3
+
+new_hash = generate_password_hash('新密码')
+conn = sqlite3.connect('uploads.db')
+conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, 管理员ID))
+conn.commit()
+conn.close()</pre>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>Q：如何迁移或备份数据？</summary>
+                    <div class="details-inner">
+                        <p>直接备份 <code>uploads/</code> 目录（所有文件）和 <code>uploads.db</code>（数据库记录）。恢复时将两者放回原位置即可。</p>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>Q：能否限制用户存储空间？</summary>
+                    <div class="details-inner">
+                        <p>当前版本未实现配额管理，所有用户共享同一个磁盘空间（实际物理磁盘大小限制）。如有需求可参考"未来扩展方向"进行二次开发。</p>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>Q：手机访问时导航栏按钮消失？</summary>
+                    <div class="details-inner">
+                        <p>当屏幕宽度小于 992px 时，导航栏会自动折叠为汉堡菜单，点击即可展开。</p>
+                    </div>
+                </details>
+
+                <details class="about-details">
+                    <summary>Q：文件名显示不全或被截断？</summary>
+                    <div class="details-inner">
+                        <p>移动端文件名超过 25 字符会自动截断并显示 "..."，可横向滑动表格查看完整名称，鼠标悬停也有提示。</p>
+                    </div>
+                </details>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 未来扩展方向 ==================== -->
+    <!-- <div class="container mb-5">
+        <h2 class="text-center mb-4" style="color: #00469c; font-weight: 700;">未来扩展方向</h2>
+        <div class="card about-card shadow-sm">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul>
+                            <li>文件删除、重命名、移动（普通用户）</li>
+                            <li>文件在线预览（文本、图片、视频等）</li>
+                            <li>用户自行修改密码</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul>
+                            <li>回收站机制（误删恢复）</li>
+                            <li>用户空间配额及已用容量显示</li>
+                            <li>文件上传类型限制（MIME/扩展名白名单）</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+    <!-- ==================== 10. 页脚 ==================== -->
+    <footer class="about-footer">
+        <p class="mb-1">
+            <strong>Fileledge</strong> · 基于 Flask + SQLite 的轻量级私有云盘系统
+        </p>
+        <p class="mb-1">
+            采用 <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT 许可证</a> 开源
+        </p>
+        <p class="mb-1">
+            维护者：<strong>djh2203</strong> · 
+            邮箱：<a href="mailto:hehe22032007@outlook.com">hehe22032007@outlook.com</a> · 
+            仓库：<a href="https://github.com/djh2203/fileledge" target="_blank" rel="noopener">djh2203/fileledge</a>
+        </p>
+        <p class="mb-0 text-muted" style="font-size: 0.8rem;">
+            &copy; 2026 Fileledge. 欢迎自由使用和修改，但须保留原始版权声明。
+        </p>
+    </footer>
+
+</div><!-- /.about-content -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function() {
+        // 避免重复创建
+        if (document.getElementById('vanta-fixed-bg')) return;
+
+        // 1. 将 body 原先的 id 改掉，避免冲突
+        document.body.id = 'vanta-bg-body';
+
+        // 2. 创建新的固定背景容器
+        var fixedBg = document.createElement('div');
+        fixedBg.id = 'vanta-fixed-bg';
+        fixedBg.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;';
+        document.body.prepend(fixedBg);
+
+        // 3. 把可能已经存在的 canvas 移过来（如果 base.html 的脚本已执行）
+        var oldCanvas = document.querySelector('#vanta-bg-body canvas');
+        if (oldCanvas) {
+            fixedBg.appendChild(oldCanvas);
+        } else {
+            // 若不存在则重新初始化 Vanta（使用相同参数）
+            VANTA.FOG({
+                el: "#vanta-fixed-bg",
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                highlightColor: 0x024598,
+                midtoneColor: 0x034391,
+                lowlightColor: 0x044693,
+                baseColor: 0xbec5d7,
+                blurFactor: 0.48,
+                speed: 0.50,
+                zoom: 0.80
+            });
+        }
+    })();
+</script>
+{% endblock %}

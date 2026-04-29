@@ -26,6 +26,7 @@
                 {% if role == 'admin' %}
                 <a class="nav-link" href="{{ url_for('admin_panel') }}">管理用户</a>
                 {% endif %}
+                <a class="nav-link" href="{{ url_for('about') }}" style="text-decoration: underline;">关于此项目</a>
                 <a class="nav-link" href="{{ url_for('logout') }}">退出登录</a>
             </div>
         </div>

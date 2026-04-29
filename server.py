@@ -129,8 +129,8 @@ def inject_csrf_token():
 # ---------- 初始化钩子：若无任何用户，强制跳转到 /init ----------
 @app.before_request
 def before_request():
-    # 允许访问静态文件、login、init 页面本身
-    if request.endpoint in ('login', 'init', 'static'):
+    # 允许访问静态文件、login、init、about 页面本身
+    if request.endpoint in ('login', 'init', 'about', 'static'):
         return
     # 如果数据库中没有用户，并且访问的不是 /init，则重定向
     if database.get_user_count() == 0 and request.endpoint != 'init':
@@ -205,6 +205,12 @@ def init():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+@app.route('/about')
+def about():
+    """关于页面 - 项目宣传页"""
+    return render_template('about.html')
 
 
 @app.route('/admin', methods=['GET', 'POST'])
