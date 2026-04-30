@@ -2,6 +2,16 @@
 {% block title %}文件管理{% endblock %}
 
 {% block head_extra %}
+<style>
+    body#vanta-bg,
+    body#vanta-bg-body {
+        position: relative !important;
+        height: auto !important;
+        min-height: 100vh;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+</style>
 <script>
     const MAX_FILE_SIZE = {{ max_content_length }};
     const CURRENT_PATH = "{{ current_path }}";
@@ -148,5 +158,35 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+    (function() {
+        if (document.getElementById('vanta-fixed-bg')) return;
+        document.body.id = 'vanta-bg-body';
+        var fixedBg = document.createElement('div');
+        fixedBg.id = 'vanta-fixed-bg';
+        fixedBg.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;';
+        document.body.prepend(fixedBg);
+        var oldCanvas = document.querySelector('#vanta-bg-body canvas');
+        if (oldCanvas) {
+            fixedBg.appendChild(oldCanvas);
+        } else {
+            VANTA.FOG({
+                el: "#vanta-fixed-bg",
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                highlightColor: 0x024598,
+                midtoneColor: 0x034391,
+                lowlightColor: 0x044693,
+                baseColor: 0xbec5d7,
+                blurFactor: 0.48,
+                speed: 0.50,
+                zoom: 0.80
+            });
+        }
+    })();
+</script>
 <script src="{{ url_for('static', filename='upload.js') }}?v=20260426"></script>
 {% endblock %}
