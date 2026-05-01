@@ -65,6 +65,7 @@
 - **CSRF 防护**：全局生成并校验 CSRF Token，防止跨站请求伪造
 - **登录保护**：所有文件管理路由均使用 `login_required` 装饰器验证会话
 - **管理员专属接口**：`/admin` 路由被 `admin_required` 装饰器保护，仅限管理员访问
+- **登录限流**：同一用户名连续登录失败 5 次后临时锁定 15 分钟，并延迟响应，防止暴力破解
 - **初始化钩子**：`before_request` 钩子检测如果数据库中没有任何用户，则将除 `/init`、`/login` 和静态文件外的所有请求重定向至 `/init` 页面
 - **路径穿越防护**：`is_safe_path()` 函数结合 `os.path.abspath` 与上传基路径比较，确保用户不能通过构造路径访问或操作 `uploads/` 以外的文件
 
@@ -73,7 +74,6 @@
 - 基于 **Bootstrap 5** 的响应式布局
 - **深蓝导航栏**含 Logo 图片
 - **Vanta.js 拓扑动态背景**（可定制颜色）
-- 文件列表去掉"类型"列，界面更简洁
 - 上传进度条采用 Bootstrap 条纹动画条
 - 面包屑导航方便浏览多级目录
 
@@ -112,7 +112,8 @@
 │   ├── login.html          # 登录页面
 │   ├── init.html           # 首次初始化管理员页面
 │   ├── admin.html          # 管理员用户列表
-│   └── admin_user_files.html # 管理员管理用户文件
+│   ├── admin_user_files.html # 管理员管理用户文件
+│   └── about.html          # 项目宣传页
 ├── uploads.db              # SQLite 数据库文件（运行后自动生成）
 └── uploads/                # 用户上传文件的物理存储目录（运行后自动生成）
     └── <user_id>/          # 按用户 ID 隔离存储
@@ -144,27 +145,22 @@
    ```
 
 3. **安装依赖**
-   在项目根目录创建 `requirements.txt` 文件：
-   ```text
-   Flask
-   Werkzeug
-   flask-compress
-   gunicorn
-   ```
-   然后执行：
+   在项目根目录执行：
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **检查配置**  
+
    项目根目录下的 `config.json` 中 `max_file_size_mb` 默认值为 `100`，可按需修改
+
 
 5. **清理旧数据（如有需要）**  
    删除 `uploads.db` 即可重新初始化管理员；`uploads/` 目录可保留，不影响初始化
 
 6. **启动应用**  
    ```bash
-   python server.py
+   bash start.sh
    ```
    服务将在 `http://127.0.0.1:5000` 运行
 
@@ -227,6 +223,19 @@
 | `app.secret_key` | Flask 会话加密密钥。应用首次启动会自动在项目根目录生成 `secret_config.py` 保存固定密钥。**生产环境**建议通过环境变量自定义：`export SECRET_KEY="your-generated-secret-key"` |
 | 数据库路径 | 在 `database.py` 中由 `DATABASE = 'uploads.db'` 定义，如需修改可调整该变量 |
 
+### 企业微信通知（可选）
+
+项目根目录下的 `webhooks.json` 用于配置文件上传通知，格式为：
+```json
+{
+    "用户名": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx"
+}
+```
+- 键为系统内的用户名，值为对应企业微信群机器人的 Webhook 地址。
+- 文件上传成功后，会异步向该 Webhook 发送通知。
+- 未配置的用户不会发送通知。
+- **安全提醒**：该文件包含密钥，请勿提交到公开仓库。
+
 ---
 
 ---
@@ -270,16 +279,8 @@ def add_cache_headers(response):
 
 ### 5. 使用 Gunicorn 启动
 
-方式一：直接使用命令行
 
-```bash
-gunicorn -w 4 -b 127.0.0.1:5000 server:app
-```
-
-- `-w` 指定 worker 进程数
-- `server:app` 表示从 `server.py` 导入 Flask 实例 `app`
-
-方式二：使用项目提供的 `start.sh` 脚本（推荐）
+使用项目提供的 `start.sh` 脚本（推荐）
 
 ```bash
 # 先激活虚拟环境
@@ -288,7 +289,7 @@ source venv/bin/activate   # Linux/Mac
 
 # 在 start.sh 中设置环境变量 SECRET_KEY（可选）
 # 然后执行脚本
-./start.sh
+bash start.sh
 ```
 
 注意：`start.sh` 使用单 worker 模式（`-w 1`）以避免 session 丢失，可根据服务器配置调整。
@@ -349,6 +350,8 @@ app.config.update(
 - **密码强度**：当前仅做最小长度要求（6位），建议管理员引导用户使用复杂密码
 - **管理员删除防护**：管理员删除用户文件时经过 `user_id` 物理隔离与数据库级校验，防止误删其他用户数据
 - **CSRF 保护**：所有 POST 请求（包括删除操作）均验证 CSRF Token
+- **登录限制**：连续失败 5 次锁定 15 分钟，锁定状态存储在内存中（重启后重置），若使用多 worker 部署建议搭配 Redis
+- **Webhook 密钥保管**：`webhooks.json` 中包含企业微信机器人密钥，务必加入 `.gitignore` 并妥善保管
 - **文件类型白名单（可扩展）**：当前未限制文件类型，若需提高安全性，可在上传逻辑中增加 MIME 或扩展名白名单校验
 
 ---
@@ -408,6 +411,18 @@ A：当屏幕宽度小于 992px 时，导航栏会自动折叠为汉堡菜单，
 <summary><strong>Q：文件名显示不全或被截断？</strong></summary>
 
 A：移动端文件名超过 25 字符会自动截断并显示 "..."，可横向滑动表格查看完整名称，鼠标悬停也有提示。
+</details>
+
+<details>
+<summary><strong>Q：如何配置企业微信通知？</strong></summary>
+
+A：在项目根目录创建 `webhooks.json`，按以下格式填写用户名和对应的机器人 Webhook 地址：
+```json
+{
+    "admin": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxx"
+}
+```
+确保已安装 `requests` 库。配置后用户上传文件时会自动向对应群聊发送通知。未配置的用户不会发送任何消息。
 </details>
 
 ---
