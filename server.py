@@ -4,6 +4,7 @@ import re
 import json
 import secrets
 import shutil
+import time
 import database
 from datetime import datetime
 from functools import wraps
@@ -63,6 +64,8 @@ def load_or_create_secret_key():
 database.init_db()
 
 app = Flask(__name__)
+# 暴力破解防护：记录 {用户名: (失败次数, 首次失败时间戳)}
+LOGIN_FAILS = {}
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 Compress(app)
 app.secret_key = load_or_create_secret_key()
@@ -147,11 +150,42 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
 
+        # ----- 暴力破解防护 -----
+        # 检查是否已被临时锁定（5次失败后锁定15分钟）
+        if username in LOGIN_FAILS:
+            fail_count, first_fail_time = LOGIN_FAILS[username]
+            if fail_count >= 5:
+                elapsed = time.time() - first_fail_time
+                if elapsed < 900:  # 15分钟 = 900秒
+                    time.sleep(1)
+                    return jsonify(success=False, message='尝试次数过多，请15分钟后再试'), 429
+                else:
+                    # 锁定时间已过，清除记录
+                    del LOGIN_FAILS[username]
+
+        # ----- 验证用户 -----
         user = database.get_user_by_username(username)
         if user is None or not check_password_hash(user[2], password):
+            # 登录失败：更新失败次数
+            now = time.time()
+            if username not in LOGIN_FAILS:
+                LOGIN_FAILS[username] = (1, now)
+            else:
+                fail_count, first_fail_time = LOGIN_FAILS[username]
+                if now - first_fail_time > 900:
+                    # 重置计数器
+                    LOGIN_FAILS[username] = (1, now)
+                else:
+                    LOGIN_FAILS[username] = (fail_count + 1, first_fail_time)
+
+            # 延迟1秒返回，增加暴力破解成本
+            time.sleep(1)
             return jsonify(success=False, message='用户名或密码错误'), 401
 
-        # 登录成功，写入 session（user 元组：id, username, hash, role, created_at）
+        # 登录成功：清除失败记录
+        if username in LOGIN_FAILS:
+            del LOGIN_FAILS[username]
+
         session.clear()
         session['user_id'] = user[0]
         session['username'] = user[1]

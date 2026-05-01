@@ -72,7 +72,7 @@ def create_user(username, password_hash, role='user'):
     """
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    created_at = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
+    created_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     try:
         cursor.execute('''
             INSERT INTO users (username, password_hash, role, created_at)
@@ -124,7 +124,7 @@ def get_all_users():
 def add_file_record(original_name, stored_name, size, mime_type, saved_path, relative_path, user_id):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    upload_time = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
+    upload_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     cursor.execute('''
         INSERT INTO files
         (original_filename, stored_filename, file_size, file_type, upload_time, file_path, relative_path, user_id)
@@ -210,7 +210,7 @@ def delete_folder_and_files(folder_path, user_id):
 def add_folder(folder_path, user_id):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    created_time = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
+    created_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     cursor.execute('''
         INSERT OR IGNORE INTO folders (folder_path, created_time, user_id) VALUES (?, ?, ?)
     ''', (folder_path, created_time, user_id))
