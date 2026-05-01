@@ -2,3 +2,4 @@ Flask
 Werkzeug
 flask-compress
 gunicorn
+requests

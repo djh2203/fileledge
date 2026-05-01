@@ -5,6 +5,8 @@ import json
 import secrets
 import shutil
 import time
+import requests
+import threading
 import database
 from datetime import datetime
 from functools import wraps
@@ -78,6 +80,15 @@ app.config['MAX_CONTENT_LENGTH'] = max_mb * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# ---------- 读取用户 webhook 映射 ----------
+WEBHOOKS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'webhooks.json')
+user_webhooks = {}
+try:
+    with open(WEBHOOKS_FILE, 'r', encoding='utf-8') as f:
+        user_webhooks = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    print("[WARN] webhooks.json 不存在或格式错误，将不发送任何通知")
+
 # ---------- 辅助函数 ----------
 def is_safe_path(user_path):
     abs_base = os.path.abspath(app.config['UPLOAD_FOLDER'])
@@ -93,6 +104,36 @@ def normalize_path(path):
     if result and not result.endswith('/'):
         result += '/'
     return result
+
+def send_webhook_message(username, action, filename, size=None):
+    """异步发送通知到对应用户的企业微信 webhook"""
+    webhook_url = user_webhooks.get(username)
+    if not webhook_url:
+        return  # 该用户未配置 webhook，不发送
+
+    # 格式化文件大小
+    if size is not None:
+        if size >= 1048576:
+            size_str = f" · {size / 1048576:.1f} MB"
+        elif size >= 1024:
+            size_str = f" · {size / 1024:.1f} KB"
+        else:
+            size_str = f" · {size} 字节"
+    else:
+        size_str = ""
+    msg = f"📁 文件{action}\n\n用户：{username}\n文件：{filename}{size_str}\n时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+    def _send():
+        try:
+            requests.post(
+                webhook_url,
+                json={"msgtype": "text", "text": {"content": msg}},
+                timeout=5
+            )
+        except Exception as e:
+            print(f"[WARN] 企业微信通知发送失败 ({username}): {e}")
+
+    threading.Thread(target=_send, daemon=True).start()
 
 # ---------- 登录与管理员装饰器 ----------
 def login_required(view_func):
@@ -335,25 +376,9 @@ def upload_file():
         file.mimetype, file_path, current_path,
         session['user_id']
     )
+    # 发送企业微信通知
+    send_webhook_message(session['username'], '上传', original_name, size)
     return jsonify(success=True, message=f'文件 "{original_name}" 上传成功！'), 200
-
-
-@app.route('/files')
-@login_required
-def list_files():
-    current_path = normalize_path(request.args.get('path', ''))
-    if not is_safe_path(current_path):
-        return "非法路径", 400
-
-    user_id = session['user_id']
-    folders = database.get_folders(current_path, user_id)
-    files = database.get_files_by_path(current_path, user_id)
-    return render_template('files.html',
-                           files=files,
-                           folders=folders,
-                           current_path=current_path,
-                           username=session['username'],
-                           role=session.get('role'))
 
 
 @app.route('/create-folder', methods=['POST'])
